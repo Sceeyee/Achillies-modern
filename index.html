@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Achilles — Physique Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #060606;
+  --surface:  #0e0e0e;
+  --surface2: #151515;
+  --border:   rgba(255,255,255,0.07);
+  --border-gold: rgba(200,168,75,0.25);
+  --text:     #ede8dc;
+  --text-dim: #888;
+  --text-mute:#444;
+  --gold:     #c8a84b;
+  --gold-dim: rgba(200,168,75,0.12);
+  --error:    #b91c1c;
+}
+
+html, body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── WATERMARK ─────────────────────────────────────── */
+.watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(70vw, 500px);
+  opacity: 0.032;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(0.5px);
+  overflow: hidden;
+}
+
+/* ── MEANDER BORDER ────────────────────────────────── */
+.meander {
+  display: block;
+  width: 100%;
+  height: 14px;
+  overflow: visible;
+}
+
+/* ── HEADER ────────────────────────────────────────── */
+header {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 42px 20px 30px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: 8px;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.tagline {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.8;
+}
+
+.header-meander {
+  margin-top: 20px;
+}
+
+/* ── NAV BAR (logged in) ───────────────────────────── */
+#navBar {
+  display: none;
+  position: relative;
+  z-index: 1;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+}
+
+#navBar.visible { display: flex; }
+
+.nav-user {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+
+.nav-actions { display: flex; gap: 10px; }
+
+.btn-nav {
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-nav:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── SCREENS ───────────────────────────────────────── */
+.screen { display: none; position: relative; z-index: 1; }
+.screen.active { display: block; }
+
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+}
+
+/* ── AUTH SCREEN ───────────────────────────────────── */
+#authScreen .container {
+  max-width: 440px;
+  padding-top: 60px;
+}
+
+.auth-intro {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.auth-intro p {
+  font-family: 'Crimson Pro', serif;
+  font-style: italic;
+  color: var(--text-dim);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.auth-divider span {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  white-space: nowrap;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-gold);
+}
+
+/* Auth tabs */
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 28px;
+}
+
+.auth-tab {
+  flex: 1;
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-mute);
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+}
+
+.auth-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.auth-panel { display: none; }
+.auth-panel.active { display: block; }
+
+/* Fields */
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.field input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: 'Crimson Pro', serif;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus { border-color: var(--gold); }
+
+.field-note {
+  font-size: 0.78rem;
+  color: var(--text-mute);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* Buttons */
+.btn {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 6px;
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: #000;
+  width: 100%;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.btn-primary:hover { background: #d4b558; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.btn-ghost:hover { border-color: var(--border-gold); color: var(--text); }
+
+.btn-row {
+  margin-top: 32px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Error */
+.error-banner {
+  background: rgba(185,28,28,0.12);
+  border: 1px solid rgba(185,28,28,0.3);
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  margin-bottom: 20px;
+  display: none;
+  font-style: italic;
+}
+.error-banner.visible { display: block; }
+
+/* ── STEP HEADER ───────────────────────────────────── */
+.step-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.7;
+  margin-bottom: 10px;
+}
+
+.step-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.step-desc {
+  font-family: 'Crimson Pro', serif;
+  font-size: 1rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-bottom: 32px;
+}
+
+/* ── DIVISION CARDS ────────────────────────────────── */
+.division-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 14px;
+}
+
+.division-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.division-card:hover { border-color: var(--border-gold); }
+
+.division-card.selected {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+}
+
+.division-icon {
+  font-size: 1.8rem;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.division-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.division-desc {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.division-card.selected .division-desc { color: var(--text); }
+
+.criteria-reveal {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border-gold);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-top: 20px;
+}
+
+.criteria-reveal.visible { display: block; }
+
+.criteria-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.criteria-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.ctag {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  background: var(--gold-dim);
+  color: var(--gold);
+  border: 1px solid var(--border-gold);
+  border-radius: 20px;
+  padding: 4px 14px;
+}
+
+/* ── UPLOAD ZONE ───────────────────────────────────── */
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.upload-zone {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.upload-zone:hover { border-color: var(--border-gold); }
+.upload-zone.loaded { border-style: solid; border-color: var(--gold); }
+
+.upload-zone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.upload-angle {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.upload-icon { font-size: 2rem; opacity: 0.25; margin-bottom: 8px; }
+.upload-hint { font-size: 0.8rem; color: var(--text-mute); font-style: italic; }
+
+.upload-preview {
+  width: 100%;
+  border-radius: 6px;
+  display: none;
+  max-height: 220px;
+  object-fit: cover;
+  margin-top: 12px;
+}
+
+/* API Key row */
+.api-row {
+  margin-top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.api-row label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.api-row input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: monospace;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+  position: static;
+  opacity: 1;
+  width: auto;
+  height: auto;
+  cursor: text;
+}
+
+.api-row input:focus { border-color: var(--gold); }
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.remember-row input[type=checkbox] {
+  accent-color: var(--gold);
+  width: 15px;
+  height: 15px;
+  position: static;
+  opacity: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.remember-row label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+/* ── LOADING ───────────────────────────────────────── */
+#loadingScreen {
+  display: none;
+  text-align: center;
+  padding: 100px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+#loadingScreen.active { display: block; }
+
+.spinner {
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 24px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ── REPORT ────────────────────────────────────────── */
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 600px) { .report-grid { grid-template-columns: 1fr; } }
+
+.rcard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.rcard.gold-border { border-color: var(--border-gold); }
+.rcard.full { grid-column: 1 / -1; }
+
+.rcard-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.62rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.8;
+  margin-bottom: 14px;
+}
+
+.score-number {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 4rem;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.score-denom {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 3px;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.score-bar-track {
+  height: 3px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.score-bar-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 99px;
+  width: 0;
+  transition: width 1.2s ease;
+}
+
+.score-tier {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+.div-badge {
+  display: inline-block;
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: var(--gold-dim);
+  border: 1px solid var(--border-gold);
+  color: var(--gold);
+  border-radius: 20px;
+  padding: 3px 12px;
+  margin-bottom: 14px;
+}
+
+.rcard ul, .rcard ol {
+  padding-left: 18px;
+}
+
+.rcard li {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.8;
+}
+
+.rcard li strong {
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.5px;
+  color: var(--text);
+}
+
+.rcard p {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.97rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.rcard p + p {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ── CHAT ──────────────────────────────────────────── */
+.chat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 14px;
+}
+
+.chat-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.62rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.8;
+  margin-bottom: 16px;
+}
+
+.chat-messages {
+  min-height: 140px;
+  max-height: 380px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-right: 4px;
+}
+
+.msg { display: flex; gap: 10px; max-width: 86%; }
+.msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+.msg-bub {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.msg.assistant .msg-bub {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.msg.user .msg-bub {
+  background: var(--gold);
+  color: #000;
+  font-weight: 500;
+}
+
+.msg-av {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem;
+  color: var(--gold);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.msg.user .msg-av { background: var(--gold-dim); }
+
+.typing-row {
+  display: none;
+  align-self: flex-start;
+  gap: 10px;
+  align-items: center;
+}
+
+.typing-row.visible { display: flex; }
+
+.typing-dots {
+  display: flex; gap: 5px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.typing-dots span {
+  width: 5px; height: 5px;
+  background: var(--text-mute);
+  border-radius: 50%;
+  animation: typebounce 1.2s infinite;
+}
+
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typebounce {
+  0%,60%,100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); background: var(--gold); }
+}
+
+.chat-input-row { display: flex; gap: 10px; }
+
+.chat-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.95rem;
+  outline: none;
+  resize: none;
+  height: 46px;
+  transition: border-color 0.2s;
+}
+
+.chat-input:focus { border-color: var(--gold); }
+
+.chat-send {
+  width: 46px; height: 46px;
+  background: var(--gold);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: #000;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.chat-send:hover { background: #d4b558; }
+.chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── HISTORY DRAWER ────────────────────────────────── */
+.drawer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.drawer-overlay.open { display: block; }
+
+.drawer {
+  position: fixed;
+  top: 0; right: 0;
+  width: min(420px, 95vw);
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border-gold);
+  z-index: 101;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  padding: 28px 24px;
+}
+
+.drawer-overlay.open .drawer { transform: translateX(0); }
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.drawer-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.drawer-close {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 32px; height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+
+.drawer-close:hover { border-color: var(--border-gold); color: var(--text); }
+
+.history-empty {
+  text-align: center;
+  padding: 40px 0;
+  font-family: 'Crimson Pro', serif;
+  font-style: italic;
+  color: var(--text-mute);
+}
+
+.hentry {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.hentry:hover { border-color: var(--border-gold); }
+
+.hentry-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.hentry-score {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.6rem;
+  color: var(--text);
+  line-height: 1;
+}
+
+.hentry-meta {
+  text-align: right;
+}
+
+.hentry-div {
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.hentry-date {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.8rem;
+  color: var(--text-mute);
+  font-style: italic;
+}
+
+.hentry-weakpoints {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.hentry-detail {
+  display: none;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.hentry-detail.open { display: block; }
+
+.hentry-detail p {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ── FOOTER ────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  padding: 30px 20px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  border-top: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+}
+
+/* ── UTIL ──────────────────────────────────────────── */
+.sep {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 28px 0;
+}
+
+.toggle-key {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.toggle-key:hover { border-color: var(--border-gold); color: var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- Greek Corinthian Helmet Watermark -->
+<svg class="watermark" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+  <path d="
+    M 238 340
+    C 254 328, 262 305, 258 275
+    C 254 245, 244 210, 230 175
+    C 216 140, 198 103, 175 70
+    C 158 44, 138 22, 115 15
+    C 98 10, 80 16, 67 34
+    C 55 51, 50 76, 52 102
+    C 53 118, 56 132, 56 142
+    L 43 148
+    C 30 154, 22 170, 24 194
+    C 26 214, 36 228, 50 233
+    C 58 236, 66 231, 69 223
+    C 66 206, 65 189, 70 172
+    C 76 190, 81 228, 87 260
+    C 93 290, 103 315, 118 333
+    C 131 349, 150 358, 170 358
+    C 196 358, 222 352, 238 340
+    Z
+  " fill="white"/>
+  <!-- Crest suggestion -->
+  <ellipse cx="114" cy="18" rx="18" ry="8" fill="white" transform="rotate(-15,114,18)"/>
+  <path d="M 96 18 Q 90 8 100 5 Q 114 14 128 5 Q 138 8 132 18" fill="white"/>
+</svg>
+
+<!-- Header -->
+<header>
+  <h1 class="logo">ACHILLES</h1>
+  <p class="tagline">Physique Analysis Engine</p>
+  <svg class="meander header-meander" viewBox="0 0 800 14" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="mk" x="0" y="0" width="32" height="14" patternUnits="userSpaceOnUse">
+        <path d="M0,14 L0,7 L8,7 L8,0 L24,0 L24,7 L16,7 L16,14" fill="none" stroke="#c8a84b" stroke-width="1.5" opacity="0.85"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="14" fill="url(#mk)"/>
+  </svg>
+</header>
+
+<!-- Nav bar (shown when logged in) -->
+<div id="navBar">
+  <span class="nav-user" id="navUsername"></span>
+  <div class="nav-actions">
+    <button class="btn-nav" onclick="openHistory()">History</button>
+    <button class="btn-nav" onclick="logout()">Depart</button>
+  </div>
+</div>
+
+<!-- ── AUTH SCREEN ──────────────────────────────────────── -->
+<div class="screen active" id="authScreen">
+  <div class="container">
+    <div class="auth-intro">
+      <p>Know thyself. Upload your physique, choose your division,<br>and receive an honest assessment.</p>
+    </div>
+
+    <div class="auth-divider"><span>Enter the Arena</span></div>
+
+    <div id="authError" class="error-banner"></div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Return</button>
+      <button class="auth-tab" onclick="switchTab('register')">First Time</button>
+    </div>
+
+    <!-- Login -->
+    <div class="auth-panel active" id="loginPanel">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="loginUser" placeholder="Your name" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        <p class="field-note">Your data is encrypted locally — only you can access it.</p>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()" id="loginBtn">Enter</button>
+    </div>
+
+    <!-- Register -->
+    <div class="auth-panel" id="registerPanel">
+      <div class="field">
+        <label>Choose a Name</label>
+        <input type="text" id="regUser" placeholder="Your name" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="regPass" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" id="regPassConfirm" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()">
+        <p class="field-note">Your account and all analyses are stored encrypted on this device only.</p>
+      </div>
+      <button class="btn btn-primary" onclick="doRegister()" id="registerBtn">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN APP ─────────────────────────────────────────── -->
+<div class="screen" id="appScreen">
+
+  <!-- Step 1: Division -->
+  <div class="container" id="step1" style="display:block">
+    <div class="step-label">Step I of III</div>
+    <h2 class="step-title">Choose Your Division</h2>
+    <p class="step-desc">Select the standard you wish to be judged against. This determines the scoring criteria.</p>
+
+    <div class="division-grid">
+      <div class="division-card" data-division="mens-physique" onclick="selectDiv(this)">
+        <div class="division-icon">🏄</div>
+        <div class="division-name">Men's Physique</div>
+        <div class="division-desc">Athletic upper-body. V-taper, conditioning, symmetry. Board shorts division — legs not judged.</div>
+      </div>
+      <div class="division-card" data-division="classic-physique" onclick="selectDiv(this)">
+        <div class="division-icon">🏛️</div>
+        <div class="division-name">Classic Physique</div>
+        <div class="division-desc">Golden-era proportions. Fullness, conditioning, symmetry. Height-to-weight caps apply.</div>
+      </div>
+      <div class="division-card" data-division="open-bodybuilding" onclick="selectDiv(this)">
+        <div class="division-icon">⚡</div>
+        <div class="division-name">Open Bodybuilding</div>
+        <div class="division-desc">Maximum mass with extreme conditioning. No size limits. Full body judged head to foot.</div>
+      </div>
+      <div class="division-card" data-division="aesthetic" onclick="selectDiv(this)">
+        <div class="division-icon">🎯</div>
+        <div class="division-name">General Aesthetic</div>
+        <div class="division-desc">Everyday attractiveness. Lean, athletic, proportional. Not competition-specific.</div>
+      </div>
+    </div>
+
+    <div class="criteria-reveal" id="criteriaReveal">
+      <div class="criteria-title">Judging Criteria</div>
+      <div class="criteria-tags" id="criteriaTags"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="step1Next" onclick="showStep(2)" disabled style="max-width:260px">Proceed to Upload →</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Upload -->
+  <div class="container" id="step2" style="display:none">
+    <div class="step-label">Step II of III</div>
+    <h2 class="step-title">Upload Your Photos</h2>
+    <p class="step-desc">Front, side, and back. More photos yield a more accurate analysis.</p>
+
+    <div class="upload-grid">
+      <div class="upload-zone" id="zFront">
+        <div class="upload-angle">Front</div>
+        <div class="upload-icon">⬆</div>
+        <p class="upload-hint">Arms relaxed or front double bicep</p>
+        <input type="file" accept="image/*" onchange="loadImage(event,'pFront','zFront','front')">
+        <img id="pFront" class="upload-preview">
+      </div>
+      <div class="upload-zone" id="zSide">
+        <div class="upload-angle">Side</div>
+        <div class="upload-icon">⬆</div>
+        <p class="upload-hint">Left or right profile</p>
+        <input type="file" accept="image/*" onchange="loadImage(event,'pSide','zSide','side')">
+        <img id="pSide" class="upload-preview">
+      </div>
+      <div class="upload-zone" id="zBack">
+        <div class="upload-angle">Back</div>
+        <div class="upload-icon">⬆</div>
+        <p class="upload-hint">Rear lat spread or relaxed</p>
+        <input type="file" accept="image/*" onchange="loadImage(event,'pBack','zBack','back')">
+        <img id="pBack" class="upload-preview">
+      </div>
+    </div>
+
+    <!-- Strength Inputs (aesthetic division only) -->
+    <div class="strength-section" id="strengthSection" style="display:none">
+      <div class="strength-section-title">Strength Numbers <span class="strength-optional">Optional</span></div>
+      <p class="strength-section-sub">Add your 1-rep maxes for a more complete score. Photos + lifts together give the most accurate assessment.</p>
+      <div class="strength-grid">
+        <div class="field">
+          <label>Bodyweight (lbs)</label>
+          <input type="number" id="sBodyweight" placeholder="185" min="80" max="400">
+        </div>
+        <div class="field">
+          <label>Max Bench (lbs)</label>
+          <input type="number" id="sBench" placeholder="225" min="0" max="1000">
+        </div>
+        <div class="field">
+          <label>Max Squat (lbs)</label>
+          <input type="number" id="sSquat" placeholder="315" min="0" max="1200">
+        </div>
+        <div class="field">
+          <label>Max Deadlift (lbs)</label>
+          <input type="number" id="sDeadlift" placeholder="405" min="0" max="1400">
+        </div>
+      </div>
+    </div>
+
+    <div class="api-row" id="apiRow" style="display:none">
+      <label>API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+      <button class="toggle-key" onclick="toggleKey()">Show</button>
+    </div>
+    <div class="remember-row" id="rememberRow" style="display:none; margin-top:10px; padding: 0 4px;">
+      <input type="checkbox" id="rememberKey">
+      <label for="rememberKey">Remember key in my encrypted account</label>
+    </div>
+
+    <div id="step2Error" class="error-banner" style="margin-top:16px"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="showStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="startAnalysis()" style="max-width:260px">Analyze Physique →</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Report -->
+  <div class="container" id="step3" style="display:none">
+    <div class="step-label">Achilles Report</div>
+    <h2 class="step-title">Your Physique Analysis</h2>
+
+    <div class="report-grid" id="reportGrid"></div>
+
+    <div class="chat-card">
+      <div class="chat-label">Consult Achilles</div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg assistant">
+          <div class="msg-av">A</div>
+          <div class="msg-bub">Your report is ready. Ask me anything about your physique, your weak points, or how to improve your score.</div>
+        </div>
+        <div class="typing-row" id="typingRow">
+          <div class="msg-av">A</div>
+          <div class="typing-dots"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chatInput" placeholder="Ask about training priorities, weak points, nutrition..." onkeydown="handleChatKey(event)" rows="1"></textarea>
+        <button class="chat-send" id="chatSend" onclick="sendChat()">↑</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="startOver()">← New Analysis</button>
+    </div>
+  </div>
+
+</div><!-- /appScreen -->
+
+<!-- Loading -->
+<div id="loadingScreen">
+  <svg class="chariot-svg" viewBox="0 0 290 120" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- Ground -->
+    <line x1="0" y1="113" x2="290" y2="113" stroke="rgba(200,168,75,0.18)" stroke-width="1.2"/>
+
+    <!-- Dust cloud (animated separately) -->
+    <g class="chariot-dust">
+      <ellipse cx="28" cy="110" rx="20" ry="4" fill="rgba(200,168,75,0.07)"/>
+      <ellipse cx="14" cy="108" rx="11" ry="3" fill="rgba(200,168,75,0.04)"/>
+      <line x1="36" y1="113" x2="52" y2="113" stroke="rgba(200,168,75,0.18)" stroke-width="1"/>
+    </g>
+
+    <!-- Main animated group -->
+    <g class="chariot-group">
+
+      <!-- ── HORSE ── -->
+
+      <!-- Body + neck + head as one traced path -->
+      <path d="
+        M 170,78
+        Q 192,70 216,66
+        Q 228,64 236,57
+        Q 240,49 238,41
+        Q 236,35 230,33
+        Q 222,29 216,33
+        Q 210,39 212,49
+        Q 215,55 220,57
+        Q 212,63 202,68
+        Q 188,74 175,80
+        Q 167,84 165,89
+        Q 168,85 172,82
+        Q 178,79 170,78 Z
+      " fill="#ede8dc"/>
+
+      <!-- Ear -->
+      <polygon points="233,33 237,22 241,33" fill="#ede8dc"/>
+
+      <!-- Tail (flowing left behind rump) -->
+      <path d="M 164,87 Q 150,77 146,85 Q 150,95 160,91 Z" fill="#ede8dc"/>
+
+      <!-- Mane (dark accent on neck) -->
+      <path d="M 236,42 Q 232,52 228,62" fill="none" stroke="#060606" stroke-width="2.5" stroke-linecap="round"/>
+
+      <!-- Rear left leg — pushing back -->
+      <path d="M 170,84 Q 162,98 158,113 L 163,113 Q 167,98 174,84 Z" fill="#ede8dc"/>
+
+      <!-- Rear right leg — vertical -->
+      <path d="M 180,82 Q 181,97 182,113 L 187,113 Q 186,97 185,82 Z" fill="#ede8dc"/>
+
+      <!-- Front right leg — slight forward lean -->
+      <path d="M 197,76 Q 198,94 199,113 L 204,113 Q 203,94 201,76 Z" fill="#ede8dc"/>
+
+      <!-- Front left leg — reaching far forward -->
+      <path d="M 208,74 Q 220,92 228,113 L 233,113 Q 225,92 213,74 Z" fill="#ede8dc"/>
+
+      <!-- Draw bar (connecting chariot to horse chest) -->
+      <line x1="162" y1="83" x2="197" y2="76" stroke="#ede8dc" stroke-width="5" stroke-linecap="round"/>
+
+      <!-- ── CHARIOT BASKET ── -->
+      <path d="M 95,100 L 100,76 Q 104,68 132,68 L 162,68 Q 166,70 166,84 L 166,100 Z" fill="#ede8dc"/>
+
+      <!-- ── WHEEL ── -->
+      <circle cx="95" cy="97" r="27" fill="#ede8dc"/>
+      <line x1="95" y1="70" x2="95" y2="124" stroke="#060606" stroke-width="3.5"/>
+      <line x1="68" y1="97" x2="122" y2="97" stroke="#060606" stroke-width="3.5"/>
+      <line x1="76" y1="78" x2="114" y2="116" stroke="#060606" stroke-width="3"/>
+      <line x1="114" y1="78" x2="76" y2="116" stroke="#060606" stroke-width="3"/>
+      <circle cx="95" cy="97" r="5" fill="#060606"/>
+      <circle cx="95" cy="97" r="2" fill="#ede8dc"/>
+
+      <!-- ── WARRIOR ── -->
+
+      <!-- Shield (oval on left arm) -->
+      <ellipse cx="128" cy="79" rx="9" ry="13" fill="#ede8dc"/>
+      <!-- Shield arm -->
+      <line x1="139" y1="73" x2="129" y2="77" stroke="#ede8dc" stroke-width="5" stroke-linecap="round"/>
+
+      <!-- Torso / armour block -->
+      <path d="M 137,68 L 140,100 L 160,100 L 162,72 Q 158,62 151,60 Q 144,62 137,68 Z" fill="#ede8dc"/>
+
+      <!-- Neck -->
+      <rect x="147" y="51" width="8" height="11" rx="3" fill="#ede8dc"/>
+
+      <!-- Head -->
+      <ellipse cx="151" cy="43" rx="9" ry="11" fill="#ede8dc"/>
+
+      <!-- Helmet plume -->
+      <path d="M 143,36 Q 151,8 159,34 Q 155,38 151,36 Q 147,38 143,36 Z" fill="#ede8dc"/>
+      <path d="M 151,8 Q 154,20 156,30" fill="none" stroke="#060606" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+
+      <!-- Cheek guard detail -->
+      <path d="M 142,42 L 141,52 L 146,56" fill="none" stroke="#060606" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.2"/>
+
+      <!-- ── SPEARS (3, angling upper-left) ── -->
+      <line x1="150" y1="68" x2="54" y2="18" stroke="#ede8dc" stroke-width="3" stroke-linecap="round"/>
+      <line x1="152" y1="63" x2="62" y2="9" stroke="#ede8dc" stroke-width="3" stroke-linecap="round"/>
+      <line x1="154" y1="58" x2="74" y2="4" stroke="#ede8dc" stroke-width="3" stroke-linecap="round"/>
+      <!-- Spear tips -->
+      <polygon points="54,18 44,13 52,24" fill="#ede8dc"/>
+      <polygon points="62,9 52,4 60,15" fill="#ede8dc"/>
+      <polygon points="74,4 64,-1 72,10" fill="#ede8dc"/>
+
+    </g>
+  </svg>
+  <p class="loading-text" id="loadingText">Analyzing Physique</p>
+</div>
+
+<!-- History Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeHistoryOutside(event)">
+  <div class="drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">Your History</div>
+      <button class="drawer-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">Photos never leave your device — processed via direct API call · Account data stored encrypted locally</footer>
+
+<script src="data/divisions.js?v=3"></script>
+<script src="app.js?v=3"></script>
+</body>
+</html>

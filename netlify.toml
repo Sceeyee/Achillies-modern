@@ -1,0 +1,34 @@
+# Publish the folder as-is. No build step.
+# (Prevents Netlify from auto-detecting Hugo because of config.json + data/.)
+[build]
+  publish = "."
+  command = ""
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/styles.css"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/app.js"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[functions]
+  directory = "netlify/functions"
+
+[functions."analyze"]
+  timeout = 26
+
+[build.environment]
+  NODE_VERSION = "18"

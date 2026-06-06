@@ -1,0 +1,14 @@
+{
+  "siteName": "Achilles",
+  "tagline": "Physique Analysis Engine",
+  "version": "3.0.0",
+  "model": "claude-opus-4-6",
+  "maxAnalysesPerAccount": 50,
+  "features": {
+    "showDateMode": true,
+    "photoAnnotation": true,
+    "progressCharts": true,
+    "sharing": false
+  },
+  "disclaimer": "Not medical advice — consult a qualified professional before beginning any training or nutrition program."
+}
