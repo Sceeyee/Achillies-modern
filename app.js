@@ -323,6 +323,16 @@ async function startAnalysis() {
       ? `\n\nSHOW DATE CONTEXT: This athlete has a show named "${S.showName}" in ${days} days. Include targeted show-prep advice in show_advice.`
       : '';
 
+    // Pose / condition context (all divisions)
+    const poseMap = {
+      relaxed:     'Relaxed — not flexing. The athlete is unpumped and not actively flexing. Muscle separation and size will appear less than at peak. Score with this in mind — do not penalize for lack of visible separation in a relaxed state.',
+      casual:      'Casual flex — somewhat flexed. The athlete is lightly flexed but not posing. A realistic everyday "flex" look.',
+      flexed:      'Fully flexed and posing. The athlete is actively posing with full muscle contraction.',
+      competition: 'Competition ready — peak conditioning. The athlete is peaking: dieted down, pumped, and posing under competition conditions. Hold this to the highest standard for their division.'
+    };
+    const poseVal = document.getElementById('poseCondition')?.value || 'relaxed';
+    const poseContext = `\n\nPHOTO CONDITION: ${poseMap[poseVal] || poseMap.relaxed}`;
+
     // Strength context (aesthetic division only)
     let strengthContext = '';
     if (S.division === 'aesthetic') {
@@ -348,7 +358,7 @@ Factor this strength data meaningfully into the overall_assessment, score, and p
     }
 
     const systemPrompt = `${div.prompt}
-${showContext}${strengthContext}
+${showContext}${poseContext}${strengthContext}
 
 You must provide science-based, healthy, safe advice only. Never suggest extreme cutting, dehydration, or unsafe supplementation. All feedback must be constructive, never body-shaming.
 
@@ -789,6 +799,9 @@ function startOver() {
   ['pFront','pSide','pBack'].forEach(id=>{ const i=document.getElementById(id); if(i){i.src='';i.style.display='none';} });
   ['zFront','zSide','zBack'].forEach(id=>document.getElementById(id)?.classList.remove('loaded'));
   document.getElementById('step2Error').classList.remove('visible');
+  // Reset pose dropdown
+  const poseEl = document.getElementById('poseCondition');
+  if (poseEl) poseEl.value = 'relaxed';
   // Clear strength fields and hide section
   ['sBodyweight','sBench','sSquat','sDeadlift'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const strengthSec = document.getElementById('strengthSection');

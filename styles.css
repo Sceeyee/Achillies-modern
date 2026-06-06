@@ -359,6 +359,34 @@ header {
   padding: 4px 14px;
 }
 
+/* ── POSE / CONDITION SECTION ──────────────────────────────────────────── */
+.pose-section {
+  margin-top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border-gold);
+  border-radius: 8px;
+  padding: 20px 24px;
+}
+
+.pose-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.pose-section-sub {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+.pose-section .field { margin-bottom: 0; }
+
 /* ── STRENGTH SECTION ──────────────────────────────────────────────────── */
 .strength-section {
   margin-top: 24px;
