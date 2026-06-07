@@ -475,9 +475,9 @@ function scoreGaugeSVG(score) {
     return `<path d="M ${pt(a1)} A ${r} ${r} 0 ${la} 1 ${pt(a2)}" fill="none" stroke="${col}" stroke-width="${tw}" stroke-opacity="0.28" stroke-linecap="butt"/>`;
   }).join('');
   const endAngle = Math.PI - pct * Math.PI;
-  const la = pct > 0.5 ? 1 : 0;
   const fillColor = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
-  const fillPath = pct > 0 ? `<path d="M ${pt(Math.PI)} A ${r} ${r} 0 ${la} 1 ${pt(endAngle)}" fill="none" stroke="${fillColor}" stroke-width="${tw}" stroke-linecap="round"/>` : '';
+  // large-arc-flag is always 0: fill is always the short arc from left end to needle
+  const fillPath = pct > 0 ? `<path d="M ${pt(Math.PI)} A ${r} ${r} 0 0 1 ${pt(endAngle)}" fill="none" stroke="${fillColor}" stroke-width="${tw}" stroke-linecap="round"/>` : '';
   const nx = cx + 82 * Math.cos(endAngle), ny = cy - 82 * Math.sin(endAngle);
   const tick = (v) => {
     const a = Math.PI - (v/10) * Math.PI;
