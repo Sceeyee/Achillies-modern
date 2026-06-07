@@ -179,7 +179,17 @@ function toggleShowDate() {
   if (!chkEl) return;
   const checked = chkEl.checked;
   document.getElementById('showDateFields')?.classList.toggle('visible', checked);
-  if (!checked) { S.showDate=null; S.showName=''; }
+  if (!checked) { S.showDate=null; S.showName=''; document.getElementById('showCountdownPreview').style.display='none'; }
+}
+
+function updateCountdownPreview() {
+  const dateVal = document.getElementById('showDateInput')?.value;
+  const preview = document.getElementById('showCountdownPreview');
+  if (!dateVal || !preview) return;
+  const days = Math.max(0, Math.ceil((new Date(dateVal+'T12:00:00') - new Date()) / (1000*60*60*24)));
+  document.getElementById('previewDays').textContent = days;
+  document.getElementById('previewLabel').textContent = 'Days Until ' + (document.getElementById('showNameInput')?.value.trim() || 'Show');
+  preview.style.display = 'block';
 }
 
 function readShowDate() {
@@ -320,7 +330,11 @@ async function startAnalysis() {
     const muscleGroupsJson = JSON.stringify(div.muscleGroups.reduce((a,m)=>{ a[m]={'score':0,'notes':''}; return a; }, {}));
 
     const showContext = days !== null
-      ? `\n\nSHOW DATE CONTEXT: This athlete has a show named "${S.showName}" in ${days} days. Include targeted show-prep advice in show_advice.`
+      ? `\n\nSHOW DATE CONTEXT: This athlete has a show named "${S.showName}" in ${days} days (${Math.round(days/7)} weeks out).
+
+For show_advice: Write 3-4 sentences of targeted, honest advice specific to exactly ${days} days out — what to prioritize RIGHT NOW, what not to change, and one key warning for this stage.
+
+For show_timeline: Generate a periodized prep timeline as a JSON array covering all phases from now through show day. Each phase: {"phase":"<name>","timeframe":"<e.g. 12-16 weeks out>","focus":"<2-3 specific, actionable sentences>"}. Phases should be appropriate for someone ${days} days out — skip phases already passed. Always include a Peak Week phase and a Show Day phase. Be specific to ${div.label} standards.`
       : '';
 
     // Pose / condition context (all divisions)
@@ -382,7 +396,8 @@ Respond ONLY with this exact JSON — nothing before or after:
   "photo_annotations": [
     {"view":"front|side|back","area":"<muscle group>","note":"<brief observation>","sentiment":"positive|neutral|negative","x_pct":<0-100>,"y_pct":<0-100>}
   ],
-  "show_advice": ${days!==null ? '"<targeted advice for ' + days + ' days out — what to focus on, what not to change, motivation>"' : 'null'}
+  "show_advice": ${days!==null ? '"<targeted advice for ' + days + ' days out — what to focus on, what not to change, key warning>"' : 'null'},
+  "show_timeline": ${days!==null ? '[{"phase":"<name>","timeframe":"<X-Y weeks out>","focus":"<2-3 specific sentences>"}]' : 'null'}
 }`;
 
     const body = await callClaude({
@@ -391,7 +406,7 @@ Respond ONLY with this exact JSON — nothing before or after:
         ...imageBlocks,
         { type:'text', text:`Analyze under ${div.label} standards and return the JSON report.` }
       ]}],
-      max_tokens: 1800
+      max_tokens: 2400
     });
 
     clearInterval(iv);
@@ -445,8 +460,27 @@ function renderReport(report) {
       <div class="rcard-label">Show Countdown</div>
       <div class="countdown-number">${days}</div>
       <div class="countdown-label">Days Until ${report._showName || 'Show'}</div>
-      ${report.show_advice ? `<p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-dim);font-size:0.95rem;margin-top:12px;line-height:1.7">${report.show_advice}</p>` : ''}
+      ${report.show_advice ? `<p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-dim);font-size:0.95rem;margin-top:16px;line-height:1.7;text-align:left">${report.show_advice}</p>` : ''}
     </div>`;
+
+    // Prep timeline
+    const timeline = Array.isArray(report.show_timeline) ? report.show_timeline : null;
+    if (timeline && timeline.length) {
+      html += `<div class="rcard full gold-border">
+        <div class="rcard-label">Prep Timeline</div>
+        <div class="timeline-list">
+          ${timeline.map((phase, i) => `
+            <div class="timeline-phase ${i===0?'timeline-phase-current':''}">
+              <div class="timeline-phase-header">
+                <span class="timeline-phase-name">${phase.phase}</span>
+                <span class="timeline-phase-time">${phase.timeframe}</span>
+              </div>
+              <p class="timeline-phase-focus">${phase.focus}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    }
   }
 
   // Score card
@@ -805,10 +839,17 @@ function startOver() {
   // Reset pose dropdown
   const poseEl = document.getElementById('poseCondition');
   if (poseEl) poseEl.value = 'relaxed';
-  // Clear strength fields and hide section
+  // Clear strength fields
   ['sBodyweight','sBench','sSquat','sDeadlift'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  const strengthSec = document.getElementById('strengthSection');
-  if (strengthSec) strengthSec.style.display = 'none';
+  // Reset show section
+  const showSec = document.getElementById('showSection');
+  if (showSec) showSec.style.display = 'none';
+  const showPrev = document.getElementById('showCountdownPreview');
+  if (showPrev) showPrev.style.display = 'none';
+  const showNameEl = document.getElementById('showNameInput');
+  if (showNameEl) showNameEl.value = '';
+  const showDateEl = document.getElementById('showDateInput');
+  if (showDateEl) showDateEl.value = '';
   showStep(1);
 }
 
