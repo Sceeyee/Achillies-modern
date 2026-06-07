@@ -81,7 +81,7 @@ async function doRegister() {
     const salt = bufToB64(saltBuf);
     const verifier = await deriveVerifier(pass, saltBuf);
     const cryptoKey = await deriveKey(pass, saltBuf);
-    const init = { analyses: [], savedApiKey: null, nutrition: { goals: { calories:0, protein:0, carbs:0, fat:0, water:128 }, logs: {} }, profile: { avatar: null } };
+    const init = { analyses: [], savedApiKey: null, nutrition: { goals: { calories:0, protein:0, carbs:0, fat:0, water:128 }, logs: {} }, profile: { avatar: null }, gallery: [] };
     accounts[username.toLowerCase()] = { displayName: username, salt, verifier, encryptedData: await encrypt(init, cryptoKey) };
     saveAccounts(accounts);
     S.user = { username, cryptoKey, data: init };
@@ -129,6 +129,9 @@ function enterApp() {
   }
   if (!S.user.data.profile) {
     S.user.data.profile = { avatar: null };
+  }
+  if (!S.user.data.gallery) {
+    S.user.data.gallery = [];
   }
 
   document.getElementById('authScreen').classList.remove('active');
@@ -942,6 +945,115 @@ function renderHome() {
   } else {
     latestEl.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No scans yet.</p>';
   }
+
+  renderGallery();
+}
+
+// ── GALLERY ───────────────────────────────────────────────────────────────────
+function renderGallery() {
+  if (!S.user) return;
+  const grid = document.getElementById('galleryGrid');
+  if (!grid) return;
+
+  // Combine scan photos (from analyses) + personal uploads
+  const scanPhotos = (S.user.data.analyses || [])
+    .filter(a => a.photoData)
+    .map(a => ({ src: a.photoData, date: a.date, type: 'scan', label: a.divisionLabel || 'Scan' }));
+
+  const uploads = (S.user.data.gallery || [])
+    .map((g, i) => ({ ...g, type: 'upload', idx: i }));
+
+  const all = [...uploads, ...scanPhotos]; // uploads first
+
+  if (!all.length) {
+    grid.innerHTML = '<p class="gallery-empty">No photos yet. Upload one or run a scan.</p>';
+    return;
+  }
+
+  grid.innerHTML = all.map((item, i) => `
+    <div class="gallery-item">
+      <img src="${item.src}" class="gallery-img" alt="${item.label || 'Photo'}" loading="lazy">
+      <div class="gallery-overlay">
+        <button class="gallery-action-btn" onclick="sharePhoto('${item.src}')" title="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+        ${item.type === 'upload' ? `<button class="gallery-action-btn gallery-delete-btn" onclick="deleteGalleryPhoto(${item.idx})" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>` : ''}
+      </div>
+      <div class="gallery-badge ${item.type === 'scan' ? 'gallery-badge-scan' : 'gallery-badge-upload'}">${item.type === 'scan' ? item.label : item.caption || 'Photo'}</div>
+    </div>
+  `).join('');
+}
+
+async function uploadGalleryPhotos(event) {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  const gallery = S.user.data.gallery || [];
+
+  for (const file of files) {
+    const base64 = await resizeFileToBase64(file, 1200);
+    gallery.unshift({ src: base64, date: new Date().toISOString().slice(0,10), caption: file.name.replace(/\.[^.]+$/, '') });
+  }
+
+  await saveUserData({ ...S.user.data, gallery });
+  event.target.value = '';
+  renderGallery();
+}
+
+async function deleteGalleryPhoto(idx) {
+  if (!confirm('Remove this photo?')) return;
+  const gallery = S.user.data.gallery || [];
+  gallery.splice(idx, 1);
+  await saveUserData({ ...S.user.data, gallery });
+  renderGallery();
+}
+
+async function sharePhoto(src) {
+  try {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    const file = new File([blob], 'achilles-physique.jpg', { type: blob.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Achilles Physique' });
+      return;
+    }
+  } catch(e) {}
+  // Fallback: open in new tab / download
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'Achilles Physique', text: 'Check out my physique progress!' });
+      return;
+    }
+  } catch(e) {}
+  // Last resort: download
+  const a = document.createElement('a');
+  a.href = src;
+  a.download = 'achilles-physique.jpg';
+  a.click();
+}
+
+// Resize a File object to base64 (for gallery uploads)
+function resizeFileToBase64(file, maxPx) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxPx || h > maxPx) {
+          if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else { w = Math.round(w * maxPx / h); h = maxPx; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function buildMacroMiniBar(label, val, goal, color) {

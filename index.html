@@ -1143,6 +1143,19 @@ header {
         <button class="btn btn-primary" onclick="showSection('scan')" style="flex:1">New Scan →</button>
         <button class="btn btn-ghost" onclick="showSection('nutrition');showNutriTab('log')">Log Meal</button>
       </div>
+
+      <!-- ── GALLERY ──────────────────────────────────────────── -->
+      <div class="gallery-section">
+        <div class="gallery-header-row">
+          <div class="gallery-title">Gallery</div>
+          <label class="gallery-upload-btn" for="galleryUpload">+ Upload</label>
+          <input type="file" id="galleryUpload" accept="image/*" multiple style="display:none" onchange="uploadGalleryPhotos(event)">
+        </div>
+        <div class="gallery-grid" id="galleryGrid">
+          <p class="gallery-empty">No photos yet. Upload one or run a scan.</p>
+        </div>
+      </div>
+
     </div>
   </div>
 
