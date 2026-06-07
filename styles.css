@@ -118,6 +118,11 @@ header {
   padding: 48px 20px 100px;
 }
 
+/* Inside app sections, containers get tighter padding */
+.app-section .container {
+  padding: 24px 18px 32px;
+}
+
 /* ── AUTH ──────────────────────────────────────────────────────────────── */
 #authScreen .container { max-width: 440px; padding-top: 60px; }
 
@@ -1154,37 +1159,65 @@ header {
   box-shadow: 0 0 6px var(--gold);
 }
 
-/* ── APP SECTIONS ───────────────────────────────────────────────────────── */
-.app-section { display: none; padding-bottom: 90px; }
-.app-section.active { display: block; }
-
-/* ── HOME ───────────────────────────────────────────────────────────────── */
-.home-greeting {
-  display: flex; align-items: center; gap: 16px;
-  margin-bottom: 24px; padding-top: 8px;
+/* ── APP SCREEN (full viewport) ─────────────────────────────────────────── */
+#appScreen.active {
+  position: fixed; inset: 0; z-index: 1;
+  overflow: hidden;
+  background: var(--bg);
 }
 
+/* ── APP SECTIONS (each fills screen above the nav) ─────────────────────── */
+.app-section {
+  display: none;
+  position: absolute; top: 0; left: 0; right: 0;
+  bottom: 65px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.app-section::-webkit-scrollbar { display: none; }
+.app-section.active { display: block; }
+
+/* ── PAGE HEADER (sticky top bar per section) ───────────────────────────── */
+.page-header {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(6,6,6,0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(200,168,75,0.13);
+  padding: 18px 20px 14px;
+}
+.page-header-title {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.05rem; letter-spacing: 3px;
+  color: var(--text); line-height: 1;
+}
+.page-header-sub {
+  font-family: 'Cinzel', serif;
+  font-size: 0.52rem; letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold); opacity: 0.75;
+  margin-top: 5px;
+}
+
+/* ── PAGE CONTENT ───────────────────────────────────────────────────────── */
+.page-content {
+  padding: 20px 18px 32px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ── HOME ───────────────────────────────────────────────────────────────── */
 .home-avatar {
-  width: 52px; height: 52px; border-radius: 50%;
+  width: 40px; height: 40px; border-radius: 50%;
   background: var(--surface2);
   border: 1px solid var(--border-gold);
   display: flex; align-items: center; justify-content: center;
   font-family: 'Cinzel Decorative', serif;
-  font-size: 1.1rem; color: var(--gold);
+  font-size: 0.9rem; color: var(--gold);
   flex-shrink: 0; overflow: hidden;
   background-size: cover; background-position: center;
-}
-
-.home-name {
-  font-family: 'Cinzel', serif;
-  font-size: 1.1rem; font-weight: 600;
-  color: var(--text); letter-spacing: 1px;
-  margin-bottom: 2px;
-}
-
-.home-sub {
-  font-family: 'Crimson Pro', serif;
-  font-size: 0.9rem; color: var(--text-mute); font-style: italic;
 }
 
 .home-stats-row {

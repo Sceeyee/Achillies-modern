@@ -114,7 +114,8 @@ async function doLogin() {
 
 function logout() {
   S.user=null; S.division=null; S.images={front:null,side:null,back:null}; S.chatHistory=[]; S.lastReport=null;
-  document.getElementById('navBar').classList.remove('visible');
+  document.querySelector('header').style.display = '';
+  document.getElementById('navBar').style.display = '';
   document.getElementById('authScreen').classList.add('active');
   document.getElementById('appScreen').classList.remove('active');
   document.getElementById('loginUser').value='';
@@ -136,7 +137,8 @@ function enterApp() {
 
   document.getElementById('authScreen').classList.remove('active');
   document.getElementById('appScreen').classList.add('active');
-  document.getElementById('navBar').classList.add('visible');
+  document.querySelector('header').style.display = 'none';
+  document.getElementById('navBar').style.display = 'none';
   document.getElementById('navUsername').textContent = S.user.username.toUpperCase();
   if (!IS_NETLIFY) {
     const apiRow = document.getElementById('apiRow');
@@ -267,7 +269,7 @@ async function callClaude({ system, messages, max_tokens=1500 }) {
     const r = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ system, messages, max_tokens, model: 'claude-sonnet-4-6' })
+      body: JSON.stringify({ system, messages, max_tokens, model: 'claude-haiku-4-5-20251001' })
     });
     if (!r.ok) {
       const e = await r.json().catch(() => ({}));
@@ -417,7 +419,7 @@ Respond ONLY with this exact JSON — nothing before or after:
         ...imageBlocks,
         { type:'text', text:`Analyze under ${div.label} standards and return the JSON report.` }
       ]}],
-      max_tokens: 2400
+      max_tokens: 1400
     });
 
     clearInterval(iv);
@@ -898,7 +900,7 @@ function renderHome() {
   const analyses = S.user.data.analyses || [];
   const scores   = analyses.map(a => parseFloat(a.score)||0);
 
-  document.getElementById('homeGreeting').textContent = 'Welcome, ' + S.user.username;
+  document.getElementById('homeGreeting').textContent = S.user.username.toUpperCase();
   document.getElementById('hStatScore').textContent   = scores.length ? Math.max(...scores).toFixed(1) : '—';
   document.getElementById('hStatScans').textContent   = analyses.length;
 
