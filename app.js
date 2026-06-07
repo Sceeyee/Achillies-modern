@@ -648,9 +648,10 @@ function renderReport(report) {
 
   // ── Score delta vs previous scan ──
   const prevAnalyses = S.user?.data?.analyses || [];
-  const prevScore = prevAnalyses.length >= 2 ? parseFloat(prevAnalyses[1].score) || 0 : null;
+  const _prevRaw = prevAnalyses.length >= 2 ? parseFloat(prevAnalyses[1].score) : NaN;
+  const prevScore = isNaN(_prevRaw) ? null : _prevRaw;
   const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
-  const isNewBest = prevScore !== null && score > Math.max(...prevAnalyses.slice(1).map(a=>parseFloat(a.score)||0));
+  const isNewBest = prevAnalyses.length >= 2 && score > Math.max(...prevAnalyses.slice(1).map(a=>parseFloat(a.score)||0));
   const deltaHTML = delta !== null
     ? `<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px">
         <span style="font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:${delta>=0?'#27ae60':'#e67e22'}">${delta>0?'↑'+delta.toFixed(1):delta<0?'↓'+Math.abs(delta).toFixed(1):'No change'} from last scan</span>
@@ -1118,7 +1119,7 @@ function renderLeaderboard() {
   if (!lb.length) {
     el.innerHTML = `<div style="text-align:center;padding:60px 20px">
       <div style="font-family:'Cinzel Decorative',serif;font-size:3rem;color:rgba(200,168,75,0.15);margin-bottom:16px">⚔</div>
-      <p style="font-family:'Crimson Pro',serif;font-style:italic;color:#444;font-size:0.95rem;line-height:1.6">No scores posted yet.<br>Complete a scan and tap Post Score.</p>
+      <p style="font-family:'Crimson Pro',serif;font-style:italic;color:rgba(200,168,75,0.5);font-size:0.95rem;line-height:1.6">No scores posted yet.<br>Complete a scan and tap Post Score.</p>
     </div>`;
     return;
   }
@@ -1172,11 +1173,11 @@ function renderLeaderboard() {
       <div style="padding:14px">
         <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:2px">
           <span style="font-family:'Cinzel Decorative',serif;font-size:2.4rem;line-height:1;color:${scoreColor}">${entry.score}</span>
-          <span style="font-family:'Cinzel',serif;font-size:0.45rem;letter-spacing:2px;text-transform:uppercase;color:#333">/ 10</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.45rem;letter-spacing:2px;text-transform:uppercase;color:#666">/ 10</span>
           <span style="margin-left:auto;font-family:'Cinzel',serif;font-size:0.42rem;letter-spacing:1.5px;text-transform:uppercase;color:${scoreColor};opacity:0.7">${entry.tier||''}</span>
         </div>
         ${strengthRow}
-        <div style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;margin-top:10px">${entry.date}</div>
+        <div style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:#666;margin-top:10px">${entry.date}</div>
       </div>
 
     </div>`;
@@ -1244,7 +1245,8 @@ function renderHome() {
     const a = analyses[0];
     const score = parseFloat(a.score) || 0;
     const tier = getTier(score);
-    const prevScore = analyses.length >= 2 ? parseFloat(analyses[1].score)||0 : null;
+    const _prevRaw2 = analyses.length >= 2 ? parseFloat(analyses[1].score) : NaN;
+    const prevScore = isNaN(_prevRaw2) ? null : _prevRaw2;
     const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
     const deltaStr = delta !== null
       ? `<span style="font-size:0.75rem;font-family:'Crimson Pro',serif;font-style:normal;color:${delta>=0?'rgba(74,222,128,0.9)':'rgba(248,113,113,0.9)'}">
@@ -1440,11 +1442,11 @@ function renderProfile() {
         <div style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:2px;text-transform:uppercase;color:rgba(200,168,75,0.6);margin-bottom:8px">Score History</div>
         ${scoreGraphSVG(analyses)}
         <div style="display:flex;justify-content:space-between;margin-top:4px">
-          <span style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:#333">${analyses.length} scan${analyses.length>1?'s':''}</span>
-          <span style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:#333">Best: ${bestStr}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:rgba(200,168,75,0.45)">${analyses.length} scan${analyses.length>1?'s':''}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:rgba(200,168,75,0.45)">Best: ${bestStr}</span>
         </div>`;
     } else {
-      graphEl.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:#333;font-size:0.85rem">Complete your first scan to see your history here.</p>';
+      graphEl.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:rgba(200,168,75,0.5);font-size:0.85rem">Complete your first scan to see your history here.</p>';
     }
   }
 
