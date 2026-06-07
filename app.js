@@ -179,7 +179,7 @@ function selectDiv(card) {
   document.getElementById('criteriaReveal').classList.add('visible');
   document.getElementById('step1Next').disabled = false;
   // Show date section only for competitive divisions
-  const showSec = document.getElementById('showSection');
+  const showSec = document.getElementById('showDateSection');
   showSec.style.display = S.division==='aesthetic' ? 'none' : 'block';
   // Strength inputs shown for all divisions
   const strengthSec = document.getElementById('strengthSection');
@@ -897,7 +897,7 @@ function startOver() {
   // Clear strength fields
   ['sBodyweight','sBench','sSquat','sDeadlift'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   // Reset show section
-  const showSec = document.getElementById('showSection');
+  const showSec = document.getElementById('showDateSection');
   if (showSec) showSec.style.display = 'none';
   const showPrev = document.getElementById('showCountdownPreview');
   if (showPrev) showPrev.style.display = 'none';
