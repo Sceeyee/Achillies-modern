@@ -457,111 +457,154 @@ CRITICAL: Return ONLY raw JSON — no markdown, no code fences, nothing else. Ev
   }
 }
 
+// ── SCORE GAUGE SVG ───────────────────────────────────────────────────────────
+function scoreGaugeSVG(score) {
+  const pct = Math.min(1, Math.max(0, score / 10));
+  const cx = 150, cy = 148, r = 100, tw = 18;
+  const pt = a => `${(cx + r * Math.cos(a)).toFixed(1)},${(cy - r * Math.sin(a)).toFixed(1)}`;
+  const zones = [
+    [0, 0.30, '#c0392b'],
+    [0.30, 0.50, '#e67e22'],
+    [0.50, 0.70, '#f1c40f'],
+    [0.70, 0.90, '#27ae60'],
+    [0.90, 1.00, '#c8a84b'],
+  ];
+  const zonePaths = zones.map(([f, t, col]) => {
+    const a1 = Math.PI - f * Math.PI, a2 = Math.PI - t * Math.PI;
+    const la = (t - f) > 0.5 ? 1 : 0;
+    return `<path d="M ${pt(a1)} A ${r} ${r} 0 ${la} 1 ${pt(a2)}" fill="none" stroke="${col}" stroke-width="${tw}" stroke-opacity="0.28" stroke-linecap="butt"/>`;
+  }).join('');
+  const endAngle = Math.PI - pct * Math.PI;
+  const la = pct > 0.5 ? 1 : 0;
+  const fillColor = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
+  const fillPath = pct > 0 ? `<path d="M ${pt(Math.PI)} A ${r} ${r} 0 ${la} 1 ${pt(endAngle)}" fill="none" stroke="${fillColor}" stroke-width="${tw}" stroke-linecap="round"/>` : '';
+  const nx = cx + 82 * Math.cos(endAngle), ny = cy - 82 * Math.sin(endAngle);
+  const tick = (v) => {
+    const a = Math.PI - (v/10) * Math.PI;
+    const x1 = cx + (r-14)*Math.cos(a), y1 = cy - (r-14)*Math.sin(a);
+    const x2 = cx + (r+4)*Math.cos(a),  y2 = cy - (r+4)*Math.sin(a);
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#2a2a2a" stroke-width="1.5"/>`;
+  };
+  const ticks = [0,1,2,3,4,5,6,7,8,9,10].map(tick).join('');
+  return `<svg viewBox="0 0 300 175" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:280px;display:block;margin:0 auto">
+    <path d="M ${pt(Math.PI)} A ${r} ${r} 0 0 1 ${pt(0)}" fill="none" stroke="#151515" stroke-width="${tw}" stroke-linecap="round"/>
+    ${zonePaths}
+    ${fillPath}
+    ${ticks}
+    <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${fillColor}" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="7" fill="${fillColor}"/>
+    <circle cx="${cx}" cy="${cy}" r="3.5" fill="#060606"/>
+    <text x="${cx}" y="${cy-22}" text-anchor="middle" fill="${fillColor}" font-family="Georgia,serif" font-size="44" font-weight="bold">${score}</text>
+    <text x="${cx}" y="${cy-5}" text-anchor="middle" fill="#444" font-family="Georgia,serif" font-size="9" letter-spacing="2">OUT OF 10</text>
+    <text x="44" y="${cy+20}" text-anchor="middle" fill="#c0392b" font-size="9" font-family="sans-serif">0</text>
+    <text x="256" y="${cy+20}" text-anchor="middle" fill="#c8a84b" font-size="9" font-family="sans-serif">10</text>
+  </svg>`;
+}
+
+// ── MINI GAUGE SVG (muscle groups) ───────────────────────────────────────────
+function miniGaugeSVG(name, score, notes) {
+  const pct = Math.min(1, Math.max(0, score / 10));
+  const r = 22, cx = 30, cy = 30, circ = 2 * Math.PI * r;
+  const color = pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':'#e67e22';
+  return `<div style="text-align:center" title="${notes||''}">
+    <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1a1a1a" stroke-width="5"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+        stroke-dasharray="${(pct*circ).toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${color}" font-size="13" font-weight="bold" font-family="Georgia,serif">${score}</text>
+    </svg>
+    <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dim);margin-top:2px;line-height:1.3;max-width:60px;margin-left:auto;margin-right:auto">${name}</div>
+  </div>`;
+}
+
 // ── RENDER REPORT ─────────────────────────────────────────────────────────────
 function renderReport(report) {
   const div   = DIVISIONS[report._division || S.division];
   const score = parseFloat(report.score) || 0;
+  const pct   = score / 10;
   const days  = report._showDate ? Math.max(0, Math.ceil((new Date(report._showDate)-new Date())/(1000*60*60*24))) : null;
+  const fillColor = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
 
   let html = '';
 
-  // Countdown card (if show mode)
+  // ── Show mode countdown + timeline ──
   if (days !== null) {
-    html += `
-    <div class="rcard countdown-card full gold-border" style="text-align:center">
+    html += `<div class="rcard countdown-card full gold-border" style="text-align:center">
       <div class="rcard-label">Show Countdown</div>
       <div class="countdown-number">${days}</div>
       <div class="countdown-label">Days Until ${report._showName || 'Show'}</div>
       ${report.show_advice ? `<p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-dim);font-size:0.95rem;margin-top:16px;line-height:1.7;text-align:left">${report.show_advice}</p>` : ''}
     </div>`;
-
-    // Prep timeline
     const timeline = Array.isArray(report.show_timeline) ? report.show_timeline : null;
-    if (timeline && timeline.length) {
-      html += `<div class="rcard full gold-border">
-        <div class="rcard-label">Prep Timeline</div>
-        <div class="timeline-list">
-          ${timeline.map((phase, i) => `
-            <div class="timeline-phase ${i===0?'timeline-phase-current':''}">
-              <div class="timeline-phase-header">
-                <span class="timeline-phase-name">${phase.phase}</span>
-                <span class="timeline-phase-time">${phase.timeframe}</span>
-              </div>
-              <p class="timeline-phase-focus">${phase.focus}</p>
-            </div>
-          `).join('')}
-        </div>
-      </div>`;
+    if (timeline?.length) {
+      html += `<div class="rcard full gold-border"><div class="rcard-label">Prep Timeline</div><div class="timeline-list">
+        ${timeline.map((ph, i) => `<div class="timeline-phase ${i===0?'timeline-phase-current':''}">
+          <div class="timeline-phase-header"><span class="timeline-phase-name">${ph.phase}</span><span class="timeline-phase-time">${ph.timeframe}</span></div>
+          <p class="timeline-phase-focus">${ph.focus}</p>
+        </div>`).join('')}
+      </div></div>`;
     }
   }
 
-  // Score card
-  html += `
-  <div class="rcard gold-border">
+  // ── Speedometer score card ──
+  html += `<div class="rcard gold-border" style="text-align:center;padding-bottom:12px">
     <div class="rcard-label">Achilles Score</div>
-    <div class="div-badge">${div.label}</div>
-    <div class="score-number">${report.score}</div>
-    <div class="score-denom">Out of 10</div>
-    <div class="score-bar-track"><div class="score-bar-fill" id="sBar"></div></div>
-    <div class="score-tier">${scoreTier(score)}</div>
+    <div class="div-badge" style="margin-bottom:10px">${div.label}</div>
+    ${scoreGaugeSVG(score)}
+    <div class="score-tier" style="margin-top:6px;color:${fillColor}">${scoreTier(score)}</div>
   </div>`;
 
-  // Strengths + Weaknesses
-  html += `
-  <div class="rcard">
-    <div class="rcard-label">Strengths</div>
-    <ul>${report.strengths.map(s=>`<li>${s}</li>`).join('')}</ul>
-  </div>
-  <div class="rcard">
-    <div class="rcard-label">Weak Points</div>
-    <ul>${report.weaknesses.map(w=>`<li>${w}</li>`).join('')}</ul>
+  // ── Strengths & Weaknesses (2-col) ──
+  const checkIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5" style="flex-shrink:0;margin-top:3px"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const warnIcon  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="2.5" style="flex-shrink:0;margin-top:3px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="rcard" style="padding:14px 12px">
+      <div class="rcard-label" style="margin-bottom:10px">Strengths</div>
+      ${(report.strengths||[]).map(s=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">${checkIcon}<span style="font-family:'Crimson Pro',serif;font-size:0.87rem;color:var(--text-dim);line-height:1.5">${s}</span></div>`).join('')}
+    </div>
+    <div class="rcard" style="padding:14px 12px">
+      <div class="rcard-label" style="margin-bottom:10px">Weak Points</div>
+      ${(report.weaknesses||[]).map(w=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">${warnIcon}<span style="font-family:'Crimson Pro',serif;font-size:0.87rem;color:var(--text-dim);line-height:1.5">${w}</span></div>`).join('')}
+    </div>
   </div>`;
 
-  // Priorities
-  html += `
-  <div class="rcard">
-    <div class="rcard-label">Training Priorities</div>
-    <ol>${report.priorities.map(p=>`<li><strong>${p.area}</strong> — ${p.reason}</li>`).join('')}</ol>
+  // ── Training Priorities ──
+  html += `<div class="rcard"><div class="rcard-label" style="margin-bottom:12px">Training Priorities</div>
+    ${(report.priorities||[]).map(p=>`
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(200,168,75,0.12);border:1px solid rgba(200,168,75,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Cinzel',serif;font-size:0.68rem;color:var(--gold)">${p.rank}</div>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text);margin-bottom:2px">${p.area}</div>
+          <div style="font-family:'Crimson Pro',serif;font-size:0.9rem;color:var(--text-dim);line-height:1.5">${p.reason}</div>
+        </div>
+      </div>`).join('')}
   </div>`;
 
-  // Muscle scores
+  // ── Muscle group mini-gauges ──
   if (report.muscle_scores && Object.keys(report.muscle_scores).length) {
-    const bars = Object.entries(report.muscle_scores).map(([muscle, data]) => {
-      const s = typeof data==='object' ? data.score : data;
-      const n = typeof data==='object' ? data.notes : '';
-      return `<div class="muscle-bar-row" title="${n}">
-        <div class="muscle-bar-label">${muscle}</div>
-        <div class="muscle-bar-track"><div class="muscle-bar-fill" data-score="${s}" style="width:0"></div></div>
-        <div class="muscle-bar-score">${s}</div>
-      </div>`;
-    }).join('');
-    html += `<div class="rcard full"><div class="rcard-label">Muscle Group Breakdown</div>${bars}</div>`;
+    html += `<div class="rcard full"><div class="rcard-label" style="margin-bottom:14px">Muscle Group Breakdown</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        ${Object.entries(report.muscle_scores).map(([m,d])=>{
+          const s = typeof d==='object'?d.score:d, n = typeof d==='object'?d.notes:'';
+          return miniGaugeSVG(m,s,n);
+        }).join('')}
+      </div>
+    </div>`;
   }
 
-  // Assessment
-  html += `
-  <div class="rcard full">
-    <div class="rcard-label">Assessment</div>
-    <p>${report.overall_assessment}</p>
-    <p>${report.potential}</p>
+  // ── Assessment ──
+  html += `<div class="rcard full"><div class="rcard-label">Assessment</div>
+    <div style="border-left:2px solid rgba(200,168,75,0.35);padding-left:16px;margin:12px 0">
+      <p style="font-family:'Crimson Pro',serif;font-size:1rem;color:var(--text);line-height:1.8;font-style:italic">${report.overall_assessment||''}</p>
+    </div>
+    ${report.potential?`<p style="font-family:'Crimson Pro',serif;font-size:0.92rem;color:var(--text-dim);line-height:1.65;margin-top:10px">${report.potential}</p>`:''}
   </div>`;
 
   document.getElementById('reportGrid').innerHTML = html;
-
-  // Animate score bar
-  setTimeout(() => {
-    const bar = document.getElementById('sBar');
-    if (bar) bar.style.width = (score/10*100)+'%';
-    document.querySelectorAll('.muscle-bar-fill').forEach(b => {
-      const s = parseFloat(b.dataset.score)||0;
-      b.style.width = (s/10*100)+'%';
-    });
-  }, 150);
-
-  // Photo annotations
   renderAnnotations(report);
 
-  // Reset chat
   document.getElementById('chatMessages').innerHTML = `
     <div class="msg assistant">
       <div class="msg-av">A</div>
@@ -881,16 +924,96 @@ document.addEventListener('DOMContentLoaded', buildDivisionGrid);
 
 // ── SECTION NAV ───────────────────────────────────────────────────────────────
 function showSection(name) {
-  ['home','scan','nutrition','profile'].forEach(s => {
+  ['home','scan','nutrition','leaderboard','profile'].forEach(s => {
     const el = document.getElementById('section'+s.charAt(0).toUpperCase()+s.slice(1));
     if (el) el.classList.toggle('active', s===name);
     const btn = document.getElementById('bnav'+s.charAt(0).toUpperCase()+s.slice(1));
     if (btn) btn.classList.toggle('active', s===name);
   });
-  if (name==='home')      renderHome();
-  if (name==='profile')   renderProfile();
-  if (name==='nutrition') { renderNutriToday(); renderMealsList(); }
-  window.scrollTo({ top:0, behavior:'smooth' });
+  if (name==='home')        renderHome();
+  if (name==='profile')     renderProfile();
+  if (name==='leaderboard') renderLeaderboard();
+  if (name==='nutrition')   { renderNutriToday(); renderMealsList(); }
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────────────────
+const LB_KEY = 'achilles_leaderboard_v1';
+
+function getLeaderboard() {
+  try { return JSON.parse(localStorage.getItem(LB_KEY) || '[]'); } catch { return []; }
+}
+function saveLeaderboard(entries) {
+  localStorage.setItem(LB_KEY, JSON.stringify(entries));
+}
+
+function postToLeaderboard() {
+  const report = S.lastReport;
+  if (!report) { alert('No scan to post. Complete a scan first.'); return; }
+  const lb = getLeaderboard();
+  const score = parseFloat(report.score) || 0;
+  const username = S.user.username;
+  const divLabel = DIVISIONS[report._division || S.division]?.label || report.division || '—';
+
+  // Remove existing entry for this user+division, keep best score
+  const existing = lb.find(e => e.username === username && e.division === divLabel);
+  if (existing && existing.score >= score) {
+    alert(`Your current best for ${divLabel} is ${existing.score} — this score (${score}) doesn't beat it.`);
+    return;
+  }
+  const filtered = lb.filter(e => !(e.username === username && e.division === divLabel));
+  filtered.push({
+    username,
+    score,
+    division: divLabel,
+    date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
+    tier: scoreTier(score)
+  });
+  saveLeaderboard(filtered);
+  showSection('leaderboard');
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('leaderboardList');
+  if (!el) return;
+  const lb = getLeaderboard();
+  if (!lb.length) {
+    el.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No scores posted yet. Complete a scan and tap Post Score.</p>';
+    return;
+  }
+
+  // Sort by score desc
+  const sorted = [...lb].sort((a,b) => b.score - a.score);
+  const medals = ['🥇','🥈','🥉'];
+
+  el.innerHTML = sorted.map((entry, i) => {
+    const pct = entry.score / 10;
+    const color = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
+    const isMe = entry.username === S.user?.username;
+    const r = 22, cx = 28, cy = 28, circ = 2*Math.PI*r;
+
+    return `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);${isMe?'background:rgba(200,168,75,0.04);margin:0 -18px;padding:14px 18px;border-radius:10px;':''}">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:1.1rem;width:28px;text-align:center;color:${i<3?'var(--gold)':'var(--text-mute)'}">${medals[i] || i+1}</div>
+      <svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1a1a1a" stroke-width="5"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+          stroke-dasharray="${(pct*circ).toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"
+          transform="rotate(-90 ${cx} ${cy})"/>
+        <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${color}" font-size="13" font-weight="bold" font-family="Georgia,serif">${entry.score}</text>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:1.5px;color:${isMe?'var(--gold)':'var(--text)'};margin-bottom:2px">${entry.username}${isMe?' ★':''}</div>
+        <div style="font-family:'Crimson Pro',serif;font-size:0.82rem;color:var(--text-mute);font-style:italic">${entry.division}</div>
+        <div style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;color:${color};margin-top:3px">${entry.tier}</div>
+      </div>
+      <div style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;color:var(--text-mute);text-align:right">${entry.date}</div>
+    </div>`;
+  }).join('');
+}
+
+function clearLeaderboard() {
+  if (!confirm('Clear the entire leaderboard?')) return;
+  localStorage.removeItem(LB_KEY);
+  renderLeaderboard();
 }
 
 // ── HOME ──────────────────────────────────────────────────────────────────────

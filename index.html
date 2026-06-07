@@ -1011,19 +1011,20 @@ header {
   flex: 1;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 5px;
+  gap: 4px;
   background: none; border: none;
   color: #484848;
   font-family: 'Cinzel', serif;
-  font-size: 0.47rem; letter-spacing: 1px;
+  font-size: 0.42rem; letter-spacing: 0.8px;
   text-transform: uppercase;
   cursor: pointer;
-  padding: 8px 4px 6px;
-  border-radius: 14px;
+  padding: 7px 2px 5px;
+  border-radius: 12px;
   transition: color 0.18s, background 0.18s;
   position: relative;
+  min-width: 0;
 }
-.bnav-item svg { transition: transform 0.18s; }
+.bnav-item svg { transition: transform 0.18s; width: 20px; height: 20px; }
 .bnav-item:hover { color: #666; background: rgba(255,255,255,0.03); }
 .bnav-item.active { color: var(--gold); background: rgba(200,168,75,0.08); }
 .bnav-item.active svg { transform: scale(1.1); }
@@ -1410,6 +1411,10 @@ header {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
       <span>Nutrition</span>
     </button>
+    <button class="bnav-item" id="bnavLeaderboard" onclick="showSection('leaderboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>
+      <span>Ranks</span>
+    </button>
     <button class="bnav-item" id="bnavProfile" onclick="showSection('profile')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span>Profile</span>
@@ -1652,6 +1657,7 @@ header {
 
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="startOver()">← New Analysis</button>
+      <button class="btn btn-primary" onclick="postToLeaderboard()" style="flex:1">Post Score →</button>
     </div>
   </div>
 
@@ -1799,6 +1805,20 @@ header {
     </div>
     </div><!-- /page-content -->
   </div><!-- /sectionNutrition -->
+
+  <!-- ── LEADERBOARD SECTION ─────────────────────────────── -->
+  <div class="app-section" id="sectionLeaderboard">
+    <div class="page-header">
+      <div>
+        <div class="page-header-title">Rankings</div>
+        <div class="page-header-sub">Achilles Leaderboard</div>
+      </div>
+      <button class="btn-nav" onclick="clearLeaderboard()" style="font-size:0.5rem;padding:5px 10px;opacity:0.4">Reset</button>
+    </div>
+    <div class="page-content">
+      <div id="leaderboardList"><p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No scores posted yet. Complete a scan and post your score.</p></div>
+    </div>
+  </div>
 
   <!-- ── PROFILE SECTION ──────────────────────────────────── -->
   <div class="app-section" id="sectionProfile">
