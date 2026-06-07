@@ -390,36 +390,35 @@ ${isAesthetic
     const systemPrompt = `${div.prompt}
 ${showContext}${poseContext}${strengthContext}
 
-You must provide science-based, healthy, safe advice only. Never suggest extreme cutting, dehydration, or unsafe supplementation. All feedback must be constructive, never body-shaming.
+Science-based, safe advice only. Never suggest extreme cutting, dehydration, or unsafe supplementation. Be constructive.
 
-Respond ONLY with this exact JSON — nothing before or after:
+CRITICAL: Return ONLY raw JSON — no markdown, no code fences, nothing else. Every text field must be under 20 words. Be extremely concise.
+
 {
-  "score": <number 1-10 one decimal>,
+  "score": <1-10 one decimal>,
   "division": "<division label>",
-  "strengths": ["<str1>","<str2>","<str3>"],
-  "weaknesses": ["<weak1>","<weak2>","<weak3>"],
+  "overall_assessment": "<2 sentences max>",
+  "potential": "<1 sentence max>",
+  "strengths": ["<≤15 words>","<≤15 words>","<≤15 words>"],
+  "weaknesses": ["<≤15 words>","<≤15 words>","<≤15 words>"],
   "priorities": [
-    {"rank":1,"area":"<muscle/attribute>","reason":"<specific actionable why>"},
-    {"rank":2,"area":"<muscle/attribute>","reason":"<specific actionable why>"},
-    {"rank":3,"area":"<muscle/attribute>","reason":"<specific actionable why>"}
+    {"rank":1,"area":"<muscle>","reason":"<≤12 words>"},
+    {"rank":2,"area":"<muscle>","reason":"<≤12 words>"},
+    {"rank":3,"area":"<muscle>","reason":"<≤12 words>"}
   ],
-  "overall_assessment": "<3-4 sentence honest, constructive assessment>",
-  "potential": "<2 sentences on realistic ceiling and what it takes to get there>",
-  "muscle_scores": ${muscleGroupsJson.replace(/"score":0/g,'"score":<1-10>').replace(/"notes":""/g,'"notes":"<specific observation>"')},
-  "photo_annotations": [
-    {"view":"front|side|back","area":"<muscle group>","note":"<brief observation>","sentiment":"positive|neutral|negative","x_pct":<0-100>,"y_pct":<0-100>}
-  ],
-  "show_advice": ${days!==null ? '"<targeted advice for ' + days + ' days out — what to focus on, what not to change, key warning>"' : 'null'},
-  "show_timeline": ${days!==null ? '[{"phase":"<name>","timeframe":"<X-Y weeks out>","focus":"<2-3 specific sentences>"}]' : 'null'}
+  "muscle_scores": ${muscleGroupsJson.replace(/"score":0/g,'"score":<1-10>').replace(/"notes":""/g,'"notes":"<10 words max>"')},
+  "show_advice": ${days!==null ? '"<20 words max for ' + days + ' days out>"' : 'null'},
+  "show_timeline": ${days!==null ? '[{"phase":"<name>","timeframe":"<X-Y wks>","focus":"<15 words>"},{"phase":"<name>","timeframe":"<X-Y wks>","focus":"<15 words>"},{"phase":"<name>","timeframe":"<X-Y wks>","focus":"<15 words>"}]' : 'null'},
+  "chat_context": "<division label>, score <score>, top issues: <3 comma-sep weaknesses>"
 }`;
 
     const body = await callClaude({
       system: systemPrompt,
       messages: [{ role:'user', content:[
         ...imageBlocks,
-        { type:'text', text:`Analyze under ${div.label} standards and return the JSON report.` }
+        { type:'text', text:`Analyze under ${div.label} standards and return ONLY the JSON object.` }
       ]}],
-      max_tokens: 1400
+      max_tokens: 1800
     });
 
     clearInterval(iv);
