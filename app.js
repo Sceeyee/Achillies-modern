@@ -458,8 +458,42 @@ CRITICAL: Return ONLY raw JSON — no markdown, no code fences, nothing else. Ev
 }
 
 // ── SCORE GAUGE SVG ───────────────────────────────────────────────────────────
+// ── TIER SYSTEM ───────────────────────────────────────────────────────────────
+function getTier(score) {
+  const s = parseFloat(score) || 0;
+  if (s >= 9.5) return { name: 'ACHILLES',  color: '#c8a84b', bg: 'rgba(200,168,75,0.15)' };
+  if (s >= 8.5) return { name: 'DIAMOND',   color: '#88d4f5', bg: 'rgba(136,212,245,0.12)' };
+  if (s >= 7.5) return { name: 'PLATINUM',  color: '#d8d8d8', bg: 'rgba(216,216,216,0.10)' };
+  if (s >= 6.5) return { name: 'GOLD',      color: '#c8a84b', bg: 'rgba(200,168,75,0.12)' };
+  if (s >= 5.0) return { name: 'SILVER',    color: '#a8a8a8', bg: 'rgba(168,168,168,0.10)' };
+  return              { name: 'BRONZE',    color: '#cd7f32', bg: 'rgba(205,127,50,0.12)' };
+}
+
+function tierBadgeHTML(score, small = false) {
+  const t = getTier(score);
+  const fs = small ? '0.38rem' : '0.48rem';
+  const px = small ? '6px' : '8px';
+  const py = small ? '2px' : '4px';
+  return `<span style="font-family:'Cinzel',serif;font-size:${fs};letter-spacing:2px;text-transform:uppercase;color:${t.color};background:${t.bg};border:1px solid ${t.color}33;border-radius:4px;padding:${py} ${px}">${t.name}</span>`;
+}
+
+function getScanStreak() {
+  const analyses = S.user?.data?.analyses || [];
+  if (!analyses.length) return 0;
+  const sorted = [...analyses].sort((a, b) => (b.timestamp||0) - (a.timestamp||0));
+  if (!sorted[0].timestamp) return analyses.length >= 1 ? 1 : 0;
+  const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+  if (Date.now() - sorted[0].timestamp > twoWeeks) return 0;
+  let streak = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    if ((sorted[i-1].timestamp - sorted[i].timestamp) <= twoWeeks) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ── SCORE GAUGE SVG (starts at 0, animated via animateGauge) ─────────────────
 function scoreGaugeSVG(score) {
-  const pct = Math.min(1, Math.max(0, score / 10));
   const cx = 150, cy = 148, r = 100, tw = 18;
   const pt = a => `${(cx + r * Math.cos(a)).toFixed(1)},${(cy - r * Math.sin(a)).toFixed(1)}`;
   const zones = [
@@ -471,33 +505,98 @@ function scoreGaugeSVG(score) {
   ];
   const zonePaths = zones.map(([f, t, col]) => {
     const a1 = Math.PI - f * Math.PI, a2 = Math.PI - t * Math.PI;
-    const la = (t - f) > 0.5 ? 1 : 0;
-    return `<path d="M ${pt(a1)} A ${r} ${r} 0 ${la} 1 ${pt(a2)}" fill="none" stroke="${col}" stroke-width="${tw}" stroke-opacity="0.28" stroke-linecap="butt"/>`;
+    return `<path d="M ${pt(a1)} A ${r} ${r} 0 0 1 ${pt(a2)}" fill="none" stroke="${col}" stroke-width="${tw}" stroke-opacity="0.28" stroke-linecap="butt"/>`;
   }).join('');
-  const endAngle = Math.PI - pct * Math.PI;
-  const fillColor = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
-  // large-arc-flag is always 0: fill is always the short arc from left end to needle
-  const fillPath = pct > 0 ? `<path d="M ${pt(Math.PI)} A ${r} ${r} 0 0 1 ${pt(endAngle)}" fill="none" stroke="${fillColor}" stroke-width="${tw}" stroke-linecap="round"/>` : '';
-  const nx = cx + 82 * Math.cos(endAngle), ny = cy - 82 * Math.sin(endAngle);
-  const tick = (v) => {
+  const ticks = [0,1,2,3,4,5,6,7,8,9,10].map(v => {
     const a = Math.PI - (v/10) * Math.PI;
-    const x1 = cx + (r-14)*Math.cos(a), y1 = cy - (r-14)*Math.sin(a);
-    const x2 = cx + (r+4)*Math.cos(a),  y2 = cy - (r+4)*Math.sin(a);
+    const x1 = cx+(r-14)*Math.cos(a), y1 = cy-(r-14)*Math.sin(a);
+    const x2 = cx+(r+4)*Math.cos(a),  y2 = cy-(r+4)*Math.sin(a);
     return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#2a2a2a" stroke-width="1.5"/>`;
-  };
-  const ticks = [0,1,2,3,4,5,6,7,8,9,10].map(tick).join('');
-  return `<svg viewBox="0 0 300 175" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:280px;display:block;margin:0 auto">
+  }).join('');
+  // Start needle at 0 (left end) — animateGauge() will sweep it to target
+  const nx0 = cx + 82 * Math.cos(Math.PI), ny0 = cy - 82 * Math.sin(Math.PI);
+  return `<svg id="scoreGaugeSVG" viewBox="0 0 300 175" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:280px;display:block;margin:0 auto" data-target="${score}">
     <path d="M ${pt(Math.PI)} A ${r} ${r} 0 0 1 ${pt(0)}" fill="none" stroke="#151515" stroke-width="${tw}" stroke-linecap="round"/>
     ${zonePaths}
-    ${fillPath}
+    <path id="gaugeFill" d="" fill="none" stroke="#c8a84b" stroke-width="${tw}" stroke-linecap="round"/>
     ${ticks}
-    <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${fillColor}" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="${cx}" cy="${cy}" r="7" fill="${fillColor}"/>
+    <line id="gaugeNeedle" x1="${cx}" y1="${cy}" x2="${nx0.toFixed(1)}" y2="${ny0.toFixed(1)}" stroke="#c8a84b" stroke-width="2.5" stroke-linecap="round"/>
+    <circle id="gaugeHub" cx="${cx}" cy="${cy}" r="7" fill="#c8a84b"/>
     <circle cx="${cx}" cy="${cy}" r="3.5" fill="#060606"/>
-    <text x="${cx}" y="${cy-22}" text-anchor="middle" fill="${fillColor}" font-family="Georgia,serif" font-size="44" font-weight="bold">${score}</text>
+    <text id="gaugeScore" x="${cx}" y="${cy-22}" text-anchor="middle" fill="#c8a84b" font-family="Georgia,serif" font-size="44" font-weight="bold">0</text>
     <text x="${cx}" y="${cy-5}" text-anchor="middle" fill="#444" font-family="Georgia,serif" font-size="9" letter-spacing="2">OUT OF 10</text>
     <text x="44" y="${cy+20}" text-anchor="middle" fill="#c0392b" font-size="9" font-family="sans-serif">0</text>
     <text x="256" y="${cy+20}" text-anchor="middle" fill="#c8a84b" font-size="9" font-family="sans-serif">10</text>
+  </svg>`;
+}
+
+function animateGauge(targetScore) {
+  const cx = 150, cy = 148, r = 100;
+  const duration = 1400;
+  const start = performance.now();
+  const fillEl   = document.getElementById('gaugeFill');
+  const needleEl = document.getElementById('gaugeNeedle');
+  const scoreEl  = document.getElementById('gaugeScore');
+  const hubEl    = document.getElementById('gaugeHub');
+  if (!fillEl || !needleEl || !scoreEl) return;
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+  function frame(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const ease = easeOut(progress);
+    const current = targetScore * ease;
+    const pct = current / 10;
+    const fc = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
+    const endAngle = Math.PI - pct * Math.PI;
+    const ex = cx + r * Math.cos(endAngle), ey = cy - r * Math.sin(endAngle);
+    if (pct > 0.003) {
+      const sx = cx + r * Math.cos(Math.PI), sy = cy;
+      fillEl.setAttribute('d', `M ${sx.toFixed(1)},${sy.toFixed(1)} A ${r} ${r} 0 0 1 ${ex.toFixed(1)},${ey.toFixed(1)}`);
+      fillEl.setAttribute('stroke', fc);
+    }
+    const nx = cx + 82 * Math.cos(endAngle), ny = cy - 82 * Math.sin(endAngle);
+    needleEl.setAttribute('x2', nx.toFixed(1));
+    needleEl.setAttribute('y2', ny.toFixed(1));
+    needleEl.setAttribute('stroke', fc);
+    if (hubEl) hubEl.setAttribute('fill', fc);
+    scoreEl.textContent = current < 9.95 ? current.toFixed(1) : targetScore.toFixed(1);
+    scoreEl.setAttribute('fill', fc);
+    if (progress < 1) requestAnimationFrame(frame);
+    else scoreEl.textContent = parseFloat(targetScore).toFixed(1);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── SCORE HISTORY GRAPH ───────────────────────────────────────────────────────
+function scoreGraphSVG(analyses) {
+  const data = [...analyses].slice(0, 10).reverse();
+  const scores = data.map(a => parseFloat(a.score) || 0);
+  if (!scores.length) return '';
+  const W = 280, H = 90, padX = 14, padT = 14, padB = 6;
+  const gW = W - 2*padX, gH = H - padT - padB;
+  const xp = i => padX + (scores.length > 1 ? (i/(scores.length-1))*gW : gW/2);
+  const yp = s => padT + gH - (Math.min(10,Math.max(0,s))/10)*gH;
+  const line = scores.map((s,i) => `${i===0?'M':'L'} ${xp(i).toFixed(1)} ${yp(s).toFixed(1)}`).join(' ');
+  const area = scores.length > 1
+    ? `${line} L ${xp(scores.length-1).toFixed(1)} ${(padT+gH).toFixed(1)} L ${xp(0).toFixed(1)} ${(padT+gH).toFixed(1)} Z`
+    : '';
+  const best = Math.max(...scores);
+  const dots = scores.map((s,i) => {
+    const col = getTier(s).color;
+    const isBest = s === best;
+    return `<circle cx="${xp(i).toFixed(1)}" cy="${yp(s).toFixed(1)}" r="${isBest?4.5:2.5}" fill="${col}" ${isBest?'stroke="#060606" stroke-width="1.5"':''}/>`;
+  }).join('');
+  const bestIdx = scores.lastIndexOf(best);
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px;display:block">
+    <defs><linearGradient id="pgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c8a84b" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#c8a84b" stop-opacity="0"/>
+    </linearGradient></defs>
+    <line x1="${padX}" y1="${yp(7.5).toFixed(1)}" x2="${W-padX}" y2="${yp(7.5).toFixed(1)}" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="${padX}" y1="${yp(5).toFixed(1)}"   x2="${W-padX}" y2="${yp(5).toFixed(1)}"   stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="3,3"/>
+    ${area ? `<path d="${area}" fill="url(#pgGrad)"/>` : ''}
+    <path d="${line}" fill="none" stroke="rgba(200,168,75,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}
+    <text x="${xp(bestIdx).toFixed(1)}" y="${(yp(best)-7).toFixed(1)}" text-anchor="middle" fill="#c8a84b" font-family="Georgia,serif" font-size="9" font-weight="bold">${best}</text>
   </svg>`;
 }
 
@@ -547,19 +646,36 @@ function renderReport(report) {
     }
   }
 
+  // ── Score delta vs previous scan ──
+  const prevAnalyses = S.user?.data?.analyses || [];
+  const prevScore = prevAnalyses.length >= 2 ? parseFloat(prevAnalyses[1].score) || 0 : null;
+  const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
+  const isNewBest = prevScore !== null && score > Math.max(...prevAnalyses.slice(1).map(a=>parseFloat(a.score)||0));
+  const deltaHTML = delta !== null
+    ? `<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px">
+        <span style="font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:${delta>=0?'#27ae60':'#e67e22'}">${delta>0?'↑'+delta.toFixed(1):delta<0?'↓'+Math.abs(delta).toFixed(1):'No change'} from last scan</span>
+        ${isNewBest?`<span style="font-family:'Cinzel',serif;font-size:0.48rem;letter-spacing:1.5px;text-transform:uppercase;color:#c8a84b;background:rgba(200,168,75,0.12);border:1px solid rgba(200,168,75,0.3);border-radius:4px;padding:2px 6px">NEW BEST</span>`:''}
+       </div>`
+    : '';
+
   // ── Speedometer score card ──
-  html += `<div class="rcard gold-border" style="text-align:center;padding-bottom:12px">
+  const tier = getTier(score);
+  html += `<div class="rcard gold-border reveal-card" style="text-align:center;padding-bottom:12px">
     <div class="rcard-label">Achilles Score</div>
-    <div class="div-badge" style="margin-bottom:10px">${div.label}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+      <div class="div-badge" style="margin:0">${div.label}</div>
+      ${tierBadgeHTML(score)}
+    </div>
     ${scoreGaugeSVG(score)}
     <div class="score-tier" style="margin-top:6px;color:${fillColor}">${scoreTier(score)}</div>
+    ${deltaHTML}
   </div>`;
 
   // ── Strengths & Weaknesses (2-col) ──
   const checkIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5" style="flex-shrink:0;margin-top:3px"><polyline points="20 6 9 17 4 12"/></svg>`;
   const warnIcon  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="2.5" style="flex-shrink:0;margin-top:3px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
 
-  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  html += `<div class="reveal-card" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="rcard" style="padding:14px 12px">
       <div class="rcard-label" style="margin-bottom:10px">Strengths</div>
       ${(report.strengths||[]).map(s=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">${checkIcon}<span style="font-family:'Crimson Pro',serif;font-size:0.87rem;color:var(--text-dim);line-height:1.5">${s}</span></div>`).join('')}
@@ -571,7 +687,7 @@ function renderReport(report) {
   </div>`;
 
   // ── Training Priorities ──
-  html += `<div class="rcard"><div class="rcard-label" style="margin-bottom:12px">Training Priorities</div>
+  html += `<div class="rcard reveal-card"><div class="rcard-label" style="margin-bottom:12px">Training Priorities</div>
     ${(report.priorities||[]).map(p=>`
       <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
         <div style="width:28px;height:28px;border-radius:50%;background:rgba(200,168,75,0.12);border:1px solid rgba(200,168,75,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Cinzel',serif;font-size:0.68rem;color:var(--gold)">${p.rank}</div>
@@ -595,7 +711,7 @@ function renderReport(report) {
   }
 
   // ── Assessment ──
-  html += `<div class="rcard full"><div class="rcard-label">Assessment</div>
+  html += `<div class="rcard full reveal-card"><div class="rcard-label">Assessment</div>
     <div style="border-left:2px solid rgba(200,168,75,0.35);padding-left:16px;margin:12px 0">
       <p style="font-family:'Crimson Pro',serif;font-size:1rem;color:var(--text);line-height:1.8;font-style:italic">${report.overall_assessment||''}</p>
     </div>
@@ -603,6 +719,14 @@ function renderReport(report) {
   </div>`;
 
   document.getElementById('reportGrid').innerHTML = html;
+
+  // Animate gauge sweep then reveal cards sequentially
+  setTimeout(() => animateGauge(score), 80);
+  const cards = document.querySelectorAll('#reportGrid .reveal-card');
+  cards.forEach((card, i) => {
+    setTimeout(() => card.classList.add('visible'), 300 + i * 220);
+  });
+
   renderAnnotations(report);
 
   document.getElementById('chatMessages').innerHTML = `
@@ -1103,12 +1227,35 @@ function renderHome() {
     macroBars.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No goals set — visit Nutrition → Calculator.</p>';
   }
 
+  // Tier + streak badge on greeting
+  const greetingTierEl = document.getElementById('homeGreetingTier');
+  if (greetingTierEl) {
+    const streak = getScanStreak();
+    const bestScore = scores.length ? Math.max(...scores) : null;
+    let html = '';
+    if (bestScore !== null) html += tierBadgeHTML(bestScore, true) + '&nbsp;&nbsp;';
+    if (streak > 0) html += `<span style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:1px;background:rgba(255,100,50,0.12);border:1px solid rgba(255,100,50,0.25);border-radius:20px;padding:3px 8px;color:rgba(255,130,60,0.9)">${streak}W STREAK 🔥</span>`;
+    greetingTierEl.innerHTML = html;
+  }
+
   // Latest scan
   const latestEl = document.getElementById('homeLatestScan');
   if (analyses.length) {
     const a = analyses[0];
+    const score = parseFloat(a.score) || 0;
+    const tier = getTier(score);
+    const prevScore = analyses.length >= 2 ? parseFloat(analyses[1].score)||0 : null;
+    const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
+    const deltaStr = delta !== null
+      ? `<span style="font-size:0.75rem;font-family:'Crimson Pro',serif;font-style:normal;color:${delta>=0?'rgba(74,222,128,0.9)':'rgba(248,113,113,0.9)'}">
+           ${delta>=0?'↑':'↓'} ${Math.abs(delta)} vs last scan
+         </span>`
+      : '';
     latestEl.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span class="score-number" style="font-size:2.5rem">${a.score}</span>
+      <div>
+        <span class="score-number" style="font-size:2.5rem;color:${tier.color}">${a.score}</span>
+        <div style="margin-top:2px">${deltaStr}</div>
+      </div>
       <div style="text-align:right">
         <div class="div-badge" style="margin:0 0 4px 0">${a.divisionLabel}</div>
         <div style="font-family:'Crimson Pro',serif;font-size:0.85rem;color:var(--text-mute);font-style:italic">${a.date}</div>
@@ -1246,24 +1393,27 @@ function renderProfile() {
   if (!S.user) return;
   const analyses = S.user.data.analyses || [];
   const scores   = analyses.map(a => parseFloat(a.score)||0);
-  const best     = scores.length ? Math.max(...scores).toFixed(1) : '—';
+  const best     = scores.length ? Math.max(...scores) : null;
+  const bestStr  = best !== null ? best.toFixed(1) : '—';
   const avatar   = S.user.data.profile?.avatar;
+  const streak   = getScanStreak();
   const divCounts = {};
   analyses.forEach(a => { if(a.divisionLabel) divCounts[a.divisionLabel] = (divCounts[a.divisionLabel]||0)+1; });
   const topDiv = Object.entries(divCounts).sort((a,b)=>b[1]-a[1])[0];
   const topDivName = topDiv ? topDiv[0].split(' ')[0] : '—';
+  const tier = best !== null ? getTier(best) : null;
 
-  // Header subtitle
+  // Header
   const subEl = document.getElementById('profileHeaderSub');
   if (subEl) subEl.textContent = S.user.username.toUpperCase();
 
-  // Username
+  // Username + tier badge
   const unEl = document.getElementById('profileUsername');
-  if (unEl) unEl.textContent = S.user.username;
+  if (unEl) unEl.innerHTML = S.user.username + (tier ? `&nbsp;&nbsp;${tierBadgeHTML(best, true)}` : '');
 
   // Stats
   const bsEl = document.getElementById('profileBestScore');
-  if (bsEl) bsEl.textContent = best;
+  if (bsEl) bsEl.textContent = bestStr;
   const scEl = document.getElementById('profileScanCount');
   if (scEl) scEl.textContent = analyses.length;
   const dvEl = document.getElementById('profileDivision');
@@ -1280,6 +1430,28 @@ function renderProfile() {
   } else if (initEl) {
     initEl.textContent = S.user.username.charAt(0).toUpperCase();
     initEl.style.display = '';
+  }
+
+  // Score history graph
+  const graphEl = document.getElementById('profileGraph');
+  if (graphEl) {
+    if (analyses.length >= 1) {
+      graphEl.innerHTML = `
+        <div style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:2px;text-transform:uppercase;color:rgba(200,168,75,0.6);margin-bottom:8px">Score History</div>
+        ${scoreGraphSVG(analyses)}
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:#333">${analyses.length} scan${analyses.length>1?'s':''}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:#333">Best: ${bestStr}</span>
+        </div>`;
+    } else {
+      graphEl.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:#333;font-size:0.85rem">Complete your first scan to see your history here.</p>';
+    }
+  }
+
+  // Streak
+  const streakEl = document.getElementById('profileStreak');
+  if (streakEl) {
+    streakEl.textContent = streak > 0 ? `${streak} week${streak>1?'s':''} 🔥` : 'No active streak';
   }
 }
 

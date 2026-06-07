@@ -633,6 +633,17 @@ header {
   color: var(--text-dim);
 }
 
+/* ── Reveal animation for scan result cards ── */
+.reveal-card {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.reveal-card.visible {
+  opacity: 1;
+  transform: none;
+}
+
 .div-badge {
   display: inline-block;
   font-family: 'Cinzel', serif;
@@ -1427,6 +1438,7 @@ header {
       <div>
         <div class="page-header-title">Achilles</div>
         <div class="page-header-sub" id="homeGreeting">Welcome back</div>
+        <div id="homeGreetingTier" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap"></div>
       </div>
       <div class="home-avatar" id="homeAvatar"></div>
     </div>
@@ -1860,6 +1872,15 @@ header {
           <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:1px;text-transform:uppercase;color:#444;margin-top:5px">Division</div>
         </div>
       </div>
+
+      <!-- Streak -->
+      <div style="background:#0e0e0e;border:1px solid rgba(200,168,75,0.15);border-radius:10px;padding:14px 16px;text-align:center;margin-bottom:14px">
+        <div style="font-family:'Cinzel',serif;font-size:0.42rem;letter-spacing:2px;text-transform:uppercase;color:rgba(200,168,75,0.5);margin-bottom:4px">Scan Streak</div>
+        <div id="profileStreak" style="font-family:'Cinzel Decorative',serif;font-size:1rem;color:#c8a84b">—</div>
+      </div>
+
+      <!-- Score history graph -->
+      <div id="profileGraph" style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;margin-bottom:16px;min-height:80px;display:flex;flex-direction:column;justify-content:center"></div>
 
       <!-- Actions -->
       <div style="display:flex;gap:10px">
