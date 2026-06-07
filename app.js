@@ -168,9 +168,9 @@ function selectDiv(card) {
   // Show date section only for competitive divisions
   const showSec = document.getElementById('showSection');
   showSec.style.display = S.division==='aesthetic' ? 'none' : 'block';
-  // Strength inputs only for aesthetic division
+  // Strength inputs shown for all divisions
   const strengthSec = document.getElementById('strengthSection');
-  if (strengthSec) strengthSec.style.display = S.division==='aesthetic' ? 'block' : 'none';
+  if (strengthSec) strengthSec.style.display = 'block';
 }
 
 // ── SHOW DATE ─────────────────────────────────────────────────────────────────
@@ -334,27 +334,30 @@ async function startAnalysis() {
     const poseContext = `\n\nPHOTO CONDITION: ${poseMap[poseVal] || poseMap.relaxed}`;
 
     // Strength context (aesthetic division only)
+    // Strength context (all divisions — affects score only for aesthetic)
     let strengthContext = '';
-    if (S.division === 'aesthetic') {
-      const bw  = parseFloat(document.getElementById('sBodyweight')?.value) || 0;
-      const bench    = parseFloat(document.getElementById('sBench')?.value)    || 0;
-      const squat    = parseFloat(document.getElementById('sSquat')?.value)    || 0;
-      const deadlift = parseFloat(document.getElementById('sDeadlift')?.value) || 0;
-      if (bench || squat || deadlift) {
-        const ratio = (lift) => bw ? ` (${(lift/bw).toFixed(2)}x BW)` : '';
-        strengthContext = `\n\nSTRENGTH DATA PROVIDED:
+    const bw       = parseFloat(document.getElementById('sBodyweight')?.value) || 0;
+    const bench    = parseFloat(document.getElementById('sBench')?.value)       || 0;
+    const squat    = parseFloat(document.getElementById('sSquat')?.value)       || 0;
+    const deadlift = parseFloat(document.getElementById('sDeadlift')?.value)    || 0;
+    if (bench || squat || deadlift) {
+      const ratio = (lift) => bw ? ` (${(lift/bw).toFixed(2)}x BW)` : '';
+      const isAesthetic = S.division === 'aesthetic';
+      strengthContext = `\n\nSTRENGTH DATA PROVIDED:
 - Bodyweight: ${bw || 'not provided'} lbs
 - Max Bench: ${bench} lbs${ratio(bench)}
 - Max Squat: ${squat} lbs${ratio(squat)}
 - Max Deadlift: ${deadlift} lbs${ratio(deadlift)}
 
 Strength standards for men (relative to bodyweight):
-Bench  — Beginner <0.75x | Intermediate 1.0x | Advanced 1.25x | Elite 1.5x+
-Squat  — Beginner <1.0x  | Intermediate 1.5x | Advanced 2.0x  | Elite 2.5x+
+Bench    — Beginner <0.75x | Intermediate 1.0x | Advanced 1.25x | Elite 1.5x+
+Squat    — Beginner <1.0x  | Intermediate 1.5x | Advanced 2.0x  | Elite 2.5x+
 Deadlift — Beginner <1.25x | Intermediate 1.75x | Advanced 2.25x | Elite 2.75x+
 
-Factor this strength data meaningfully into the overall_assessment, score, and priorities. If no photos were provided, base the score primarily on the strength numbers and what they imply about the physique.`;
-      }
+${isAesthetic
+  ? 'Factor this strength data into the overall score, assessment, and training priorities. If no photos were provided, base the score primarily on the strength numbers.'
+  : 'Use this strength data ONLY to inform training recommendations, priorities, and genetic limiter identification — do NOT let it affect the physique score, which must be based solely on the visual assessment of the photos. Mention the lifts in the assessment and call out any strength imbalances or limiters.'
+}`;
     }
 
     const systemPrompt = `${div.prompt}
