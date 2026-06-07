@@ -1225,7 +1225,20 @@ function renderProfile() {
       }).join('')
     : `<p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem;padding:8px 0">No scans yet.</p>`;
 
-  document.getElementById('profileContent').innerHTML = `
+  let pc = document.getElementById('profileContent');
+  if (!pc) {
+    // Create it if old HTML version doesn't have it
+    const sec = document.getElementById('sectionProfile');
+    if (!sec) return;
+    pc = document.createElement('div');
+    pc.id = 'profileContent';
+    pc.className = 'page-content';
+    // Insert after page-header
+    const hdr = sec.querySelector('.page-header');
+    if (hdr && hdr.nextSibling) sec.insertBefore(pc, hdr.nextSibling);
+    else sec.appendChild(pc);
+  }
+  pc.innerHTML = `
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px">
       <div style="position:relative;flex-shrink:0">
         <div style="width:72px;height:72px;border-radius:50%;border:2px solid var(--border-gold);display:flex;align-items:center;justify-content:center;font-family:'Cinzel Decorative',serif;font-size:1.4rem;color:var(--gold);overflow:hidden;${avatarStyle}">${avatar?'':S.user.username.charAt(0).toUpperCase()}</div>
