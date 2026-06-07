@@ -1091,6 +1091,64 @@ header {
 <!-- ── MAIN APP ─────────────────────────────────────────── -->
 <div class="screen" id="appScreen">
 
+  <!-- ── BOTTOM NAV ──────────────────────────────────────── -->
+  <nav class="bottom-nav">
+    <button class="bnav-item active" id="bnavHome" onclick="showSection('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="bnav-item" id="bnavScan" onclick="showSection('scan')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Scan</span>
+    </button>
+    <button class="bnav-item" id="bnavNutrition" onclick="showSection('nutrition')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      <span>Nutrition</span>
+    </button>
+    <button class="bnav-item" id="bnavProfile" onclick="showSection('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+
+  <!-- ── HOME SECTION ─────────────────────────────────────── -->
+  <div class="app-section active" id="sectionHome">
+    <div class="container">
+      <div class="home-greeting">
+        <div class="home-avatar" id="homeAvatar"></div>
+        <div>
+          <h2 class="home-name" id="homeGreeting">Welcome back</h2>
+          <p class="home-sub">Ready to build.</p>
+        </div>
+      </div>
+
+      <div class="home-stats-row">
+        <div class="home-stat"><div class="home-stat-val" id="hStatScore">—</div><div class="home-stat-label">Best Score</div></div>
+        <div class="home-stat"><div class="home-stat-val" id="hStatScans">0</div><div class="home-stat-label">Scans</div></div>
+        <div class="home-stat"><div class="home-stat-val" id="hStatCalories">—</div><div class="home-stat-label">Kcal Today</div></div>
+        <div class="home-stat"><div class="home-stat-val" id="hStatWater">—</div><div class="home-stat-label">Water (oz)</div></div>
+      </div>
+
+      <div class="rcard gold-border" style="margin-bottom:14px">
+        <div class="rcard-label">Today's Nutrition</div>
+        <div id="homeMacroBars"><p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No goals set — visit Nutrition → Calculator to get started.</p></div>
+      </div>
+
+      <div class="rcard" style="margin-bottom:14px">
+        <div class="rcard-label">Latest Scan</div>
+        <div id="homeLatestScan"><p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No scans yet.</p></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="showSection('scan')" style="flex:1">New Scan →</button>
+        <button class="btn btn-ghost" onclick="showSection('nutrition');showNutriTab('log')">Log Meal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCAN SECTION ─────────────────────────────────────── -->
+  <div class="app-section" id="sectionScan">
+
   <!-- Step 1: Division -->
   <div class="container" id="step1" style="display:block">
     <div class="step-label">Step I of III</div>
@@ -1272,6 +1330,187 @@ header {
       <button class="btn btn-ghost" onclick="startOver()">← New Analysis</button>
     </div>
   </div>
+
+  </div><!-- /sectionScan -->
+
+  <!-- ── NUTRITION SECTION ────────────────────────────────── -->
+  <div class="app-section" id="sectionNutrition">
+    <div class="container">
+      <div class="step-label">Nutrition</div>
+      <h2 class="step-title">Track Your Diet</h2>
+
+      <div class="nutri-tabs">
+        <button class="ntab active" id="ntabBtnToday" onclick="showNutriTab('today')">Today</button>
+        <button class="ntab" id="ntabBtnLog" onclick="showNutriTab('log')">Log</button>
+        <button class="ntab" id="ntabBtnCalc" onclick="showNutriTab('calc')">Calculator</button>
+        <button class="ntab" id="ntabBtnHistory" onclick="showNutriTab('history')">History</button>
+      </div>
+
+      <!-- TODAY -->
+      <div class="ntab-panel active" id="ntabToday">
+        <div class="rcard gold-border" style="margin-bottom:14px">
+          <div class="rcard-label">Calories</div>
+          <div class="calorie-display">
+            <span class="calorie-consumed" id="todayCalConsumed">0</span>
+            <span class="calorie-sep"> / </span>
+            <span id="todayCalGoal">—</span>
+            <span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--text-mute);letter-spacing:2px"> KCAL</span>
+          </div>
+          <div class="score-bar-track" style="margin-top:10px;height:6px"><div class="score-bar-fill" id="calProgressBar" style="width:0"></div></div>
+        </div>
+        <div class="rcard" style="margin-bottom:14px">
+          <div class="rcard-label">Macros</div>
+          <div class="macro-row"><span class="macro-label">Protein</span><div class="macro-bar-track"><div class="macro-bar-fill protein-fill" id="macroProteinBar" style="width:0"></div></div><span class="macro-val"><span id="macroProteinVal">0</span>/<span id="macroProteinGoal">—</span>g</span></div>
+          <div class="macro-row"><span class="macro-label">Carbs</span><div class="macro-bar-track"><div class="macro-bar-fill carbs-fill" id="macroCarbsBar" style="width:0"></div></div><span class="macro-val"><span id="macroCarbsVal">0</span>/<span id="macroCarbsGoal">—</span>g</span></div>
+          <div class="macro-row"><span class="macro-label">Fat</span><div class="macro-bar-track"><div class="macro-bar-fill fat-fill" id="macroFatBar" style="width:0"></div></div><span class="macro-val"><span id="macroFatVal">0</span>/<span id="macroFatGoal">—</span>g</span></div>
+        </div>
+        <div class="rcard" style="margin-bottom:14px">
+          <div class="rcard-label">Water</div>
+          <div class="calorie-display" style="font-size:2.2rem">
+            <span id="waterOzDisplay">0</span>
+            <span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--text-mute);letter-spacing:2px"> / <span id="waterGoalDisplay">128</span> OZ</span>
+          </div>
+          <div class="score-bar-track" style="margin-top:10px;height:6px;background:rgba(99,179,237,0.15)"><div style="height:100%;border-radius:99px;background:rgba(99,179,237,0.7);width:0;transition:width 0.8s ease" id="waterProgressBar"></div></div>
+          <div class="water-btns">
+            <button class="btn btn-ghost" onclick="logWater(8)">+8 oz</button>
+            <button class="btn btn-ghost" onclick="logWater(16)">+16 oz</button>
+            <button class="btn btn-ghost" onclick="logWater(32)">+32 oz</button>
+            <button class="btn btn-ghost" onclick="logWater(-8)" style="color:var(--text-mute)">−8 oz</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div class="ntab-panel" id="ntabLog">
+        <div id="mealsList" style="margin-bottom:14px"></div>
+        <div class="add-meal-row">
+          <button class="btn btn-ghost" onclick="openAddMeal('manual')" style="flex:1">+ Add Manually</button>
+          <button class="btn btn-primary" onclick="openAddMeal('photo')" style="flex:1">📷 Scan Meal</button>
+        </div>
+        <!-- Manual form -->
+        <div id="addMealForm" style="display:none;margin-top:14px">
+          <div class="rcard">
+            <div class="rcard-label">Add Food</div>
+            <div class="field"><label>Food Name</label><input type="text" id="mealName" placeholder="e.g. Grilled Chicken Breast"></div>
+            <div class="strength-grid">
+              <div class="field"><label>Calories</label><input type="number" id="mealCal" placeholder="330" min="0"></div>
+              <div class="field"><label>Protein (g)</label><input type="number" id="mealPro" placeholder="62" min="0"></div>
+              <div class="field"><label>Carbs (g)</label><input type="number" id="mealCarbs" placeholder="0" min="0"></div>
+              <div class="field"><label>Fat (g)</label><input type="number" id="mealFat" placeholder="7" min="0"></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="closeAddMeal()">Cancel</button>
+              <button class="btn btn-primary" onclick="saveMealEntry()" style="flex:1">Save →</button>
+            </div>
+          </div>
+        </div>
+        <!-- Photo scan form -->
+        <div id="scanMealForm" style="display:none;margin-top:14px">
+          <div class="rcard">
+            <div class="rcard-label">Scan Meal</div>
+            <div class="upload-zone" id="mealPhotoZone" style="margin-bottom:14px">
+              <div class="upload-icon">📷</div>
+              <p class="upload-hint">Upload a photo of your meal for AI calorie estimation</p>
+              <input type="file" accept="image/*" onchange="loadMealPhoto(event)">
+              <img id="mealPhotoPreview" class="upload-preview">
+            </div>
+            <div id="mealScanResult" style="display:none;margin-bottom:14px"></div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="closeScanMeal()">Cancel</button>
+              <button class="btn btn-primary" onclick="analyzeMealPhoto()" id="scanMealBtn" style="flex:1">Analyze Meal →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALCULATOR -->
+      <div class="ntab-panel" id="ntabCalc">
+        <div class="rcard gold-border" style="margin-bottom:14px">
+          <div class="rcard-label">TDEE Calculator</div>
+          <p class="step-desc" style="margin-bottom:20px">Calculate your daily calorie target and macros based on your stats and goal.</p>
+          <div class="strength-grid">
+            <div class="field"><label>Age</label><input type="number" id="calcAge" placeholder="22" min="13" max="80"></div>
+            <div class="field"><label>Bodyweight (lbs)</label><input type="number" id="calcWeight" placeholder="180" min="80" max="400"></div>
+            <div class="field"><label>Height (inches)</label><input type="number" id="calcHeight" placeholder="70" min="48" max="96"></div>
+          </div>
+          <div class="field">
+            <label>Activity Level</label>
+            <select id="calcActivity">
+              <option value="1.2">Sedentary — desk job, no exercise</option>
+              <option value="1.375">Lightly Active — 1-3x/week</option>
+              <option value="1.55" selected>Moderately Active — 3-5x/week</option>
+              <option value="1.725">Very Active — 6-7x/week hard training</option>
+              <option value="1.9">Extremely Active — 2x/day training</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Goal</label>
+            <select id="calcGoal">
+              <option value="cut">Cut — Fat Loss (−500 kcal)</option>
+              <option value="maintain" selected>Maintain</option>
+              <option value="lean-bulk">Lean Bulk (+250 kcal)</option>
+              <option value="bulk">Bulk (+500 kcal)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="calculateTDEE()" style="margin-top:4px">Calculate →</button>
+        </div>
+        <div class="rcard" id="calcResults" style="display:none;margin-bottom:14px">
+          <div class="rcard-label">Your Targets</div>
+          <div id="calcResultsGrid"></div>
+          <button class="btn btn-ghost" onclick="saveCalcGoals()" style="margin-top:16px;width:100%">✓ Save as My Goals</button>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="ntab-panel" id="ntabHistory">
+        <div class="rcard" style="margin-bottom:14px">
+          <div class="rcard-label">Last 7 Days — Calories</div>
+          <div class="chart-wrap"><canvas id="nutriHistoryChart"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /sectionNutrition -->
+
+  <!-- ── PROFILE SECTION ──────────────────────────────────── -->
+  <div class="app-section" id="sectionProfile">
+    <div class="container">
+      <div class="step-label">Profile</div>
+
+      <div class="profile-header">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar" id="profileAvatar"></div>
+          <label class="avatar-edit" for="avatarInput">✎</label>
+          <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
+        </div>
+        <div class="profile-info">
+          <div class="profile-display-name" id="profileDisplayName"></div>
+          <div class="profile-member-sub">Achilles Member</div>
+        </div>
+      </div>
+
+      <div class="home-stats-row" style="margin-bottom:14px">
+        <div class="home-stat"><div class="home-stat-val" id="profileBestScore">—</div><div class="home-stat-label">Best Score</div></div>
+        <div class="home-stat"><div class="home-stat-val" id="profileTotalScans">0</div><div class="home-stat-label">Total Scans</div></div>
+        <div class="home-stat"><div class="home-stat-val" id="profileTopDiv">—</div><div class="home-stat-label">Division</div></div>
+      </div>
+
+      <div class="rcard" style="margin-bottom:14px">
+        <div class="rcard-label">Scan History</div>
+        <div id="profileHistoryList"></div>
+      </div>
+
+      <div class="rcard">
+        <div class="rcard-label">Account</div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn btn-ghost" onclick="openHistory()" style="flex:1">Full History</button>
+          <button class="btn btn-ghost" onclick="logout()" style="color:rgba(248,113,113,0.8);border-color:rgba(248,113,113,0.3)">Depart</button>
+        </div>
+        <p class="disclaimer" style="margin-top:12px;text-align:left">All data stored encrypted on this device only.</p>
+      </div>
+
+    </div>
+  </div><!-- /sectionProfile -->
 
 </div><!-- /appScreen -->
 

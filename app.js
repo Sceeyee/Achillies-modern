@@ -81,7 +81,7 @@ async function doRegister() {
     const salt = bufToB64(saltBuf);
     const verifier = await deriveVerifier(pass, saltBuf);
     const cryptoKey = await deriveKey(pass, saltBuf);
-    const init = { analyses: [], savedApiKey: null };
+    const init = { analyses: [], savedApiKey: null, nutrition: { goals: { calories:0, protein:0, carbs:0, fat:0, water:128 }, logs: {} }, profile: { avatar: null } };
     accounts[username.toLowerCase()] = { displayName: username, salt, verifier, encryptedData: await encrypt(init, cryptoKey) };
     saveAccounts(accounts);
     S.user = { username, cryptoKey, data: init };
@@ -123,11 +123,18 @@ function logout() {
 }
 
 function enterApp() {
+  // Ensure nutrition/profile data structures exist (migration for old accounts)
+  if (!S.user.data.nutrition) {
+    S.user.data.nutrition = { goals: { calories:0, protein:0, carbs:0, fat:0, water:128 }, logs: {} };
+  }
+  if (!S.user.data.profile) {
+    S.user.data.profile = { avatar: null };
+  }
+
   document.getElementById('authScreen').classList.remove('active');
   document.getElementById('appScreen').classList.add('active');
   document.getElementById('navBar').classList.add('visible');
   document.getElementById('navUsername').textContent = S.user.username.toUpperCase();
-  // API key row: hidden by default in HTML, only show for local dev
   if (!IS_NETLIFY) {
     const apiRow = document.getElementById('apiRow');
     const remRow = document.getElementById('rememberRow');
@@ -138,6 +145,7 @@ function enterApp() {
     document.getElementById('apiKeyInput').value = S.user.data.savedApiKey;
     document.getElementById('rememberKey').checked = true;
   }
+  showSection('home');
   showStep(1);
 }
 
@@ -866,3 +874,436 @@ function buildDivisionGrid() {
 }
 
 document.addEventListener('DOMContentLoaded', buildDivisionGrid);
+
+// ── SECTION NAV ───────────────────────────────────────────────────────────────
+function showSection(name) {
+  ['home','scan','nutrition','profile'].forEach(s => {
+    const el = document.getElementById('section'+s.charAt(0).toUpperCase()+s.slice(1));
+    if (el) el.classList.toggle('active', s===name);
+    const btn = document.getElementById('bnav'+s.charAt(0).toUpperCase()+s.slice(1));
+    if (btn) btn.classList.toggle('active', s===name);
+  });
+  if (name==='home')      renderHome();
+  if (name==='profile')   renderProfile();
+  if (name==='nutrition') { renderNutriToday(); renderMealsList(); }
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function renderHome() {
+  if (!S.user) return;
+  const analyses = S.user.data.analyses || [];
+  const scores   = analyses.map(a => parseFloat(a.score)||0);
+
+  document.getElementById('homeGreeting').textContent = 'Welcome, ' + S.user.username;
+  document.getElementById('hStatScore').textContent   = scores.length ? Math.max(...scores).toFixed(1) : '—';
+  document.getElementById('hStatScans').textContent   = analyses.length;
+
+  const todayLog = getTodayLog();
+  const goals    = S.user.data.nutrition?.goals || {};
+  const totals   = getMealTotals(todayLog.entries || []);
+  document.getElementById('hStatCalories').textContent = totals.calories || '0';
+  document.getElementById('hStatWater').textContent    = todayLog.water || '0';
+
+  // Home avatar
+  const avatar = S.user.data.profile?.avatar;
+  const hav = document.getElementById('homeAvatar');
+  if (avatar) {
+    hav.style.backgroundImage = `url(${avatar})`;
+    hav.style.backgroundSize = 'cover';
+    hav.textContent = '';
+  } else {
+    hav.textContent = S.user.username.charAt(0).toUpperCase();
+  }
+
+  // Macro preview
+  const macroBars = document.getElementById('homeMacroBars');
+  if (goals.calories) {
+    macroBars.innerHTML = buildMacroMiniBar('Calories', totals.calories, goals.calories, 'var(--gold)') +
+      buildMacroMiniBar('Protein',  totals.protein,  goals.protein,  'rgba(74,222,128,0.8)') +
+      buildMacroMiniBar('Carbs',    totals.carbs,    goals.carbs,    'rgba(251,191,36,0.8)') +
+      buildMacroMiniBar('Fat',      totals.fat,      goals.fat,      'rgba(248,113,113,0.7)');
+  } else {
+    macroBars.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No goals set — visit Nutrition → Calculator.</p>';
+  }
+
+  // Latest scan
+  const latestEl = document.getElementById('homeLatestScan');
+  if (analyses.length) {
+    const a = analyses[0];
+    latestEl.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span class="score-number" style="font-size:2.5rem">${a.score}</span>
+      <div style="text-align:right">
+        <div class="div-badge" style="margin:0 0 4px 0">${a.divisionLabel}</div>
+        <div style="font-family:'Crimson Pro',serif;font-size:0.85rem;color:var(--text-mute);font-style:italic">${a.date}</div>
+      </div>
+    </div>
+    <p style="font-family:'Crimson Pro',serif;font-size:0.9rem;color:var(--text-dim);font-style:italic;line-height:1.6">${(a.overall_assessment||'').slice(0,160)}…</p>`;
+  } else {
+    latestEl.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No scans yet.</p>';
+  }
+}
+
+function buildMacroMiniBar(label, val, goal, color) {
+  const pct = goal ? Math.min(100, Math.round((val/goal)*100)) : 0;
+  return `<div style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;margin-bottom:4px">
+      <span>${label}</span><span>${val} / ${goal}</span>
+    </div>
+    <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:${color};border-radius:99px;transition:width 0.8s ease"></div>
+    </div>
+  </div>`;
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+function renderProfile() {
+  if (!S.user) return;
+  const analyses = S.user.data.analyses || [];
+  const scores   = analyses.map(a => parseFloat(a.score)||0);
+  const avatar   = S.user.data.profile?.avatar;
+
+  document.getElementById('profileDisplayName').textContent = S.user.username;
+
+  const pav = document.getElementById('profileAvatar');
+  if (avatar) {
+    pav.style.backgroundImage = `url(${avatar})`;
+    pav.style.backgroundSize  = 'cover';
+    pav.style.backgroundPosition = 'center';
+    pav.textContent = '';
+  } else {
+    pav.textContent = S.user.username.charAt(0).toUpperCase();
+  }
+
+  document.getElementById('profileBestScore').textContent  = scores.length ? Math.max(...scores).toFixed(1) : '—';
+  document.getElementById('profileTotalScans').textContent = analyses.length;
+  const divCounts = {};
+  analyses.forEach(a => { divCounts[a.divisionLabel] = (divCounts[a.divisionLabel]||0)+1; });
+  const topDiv = Object.entries(divCounts).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('profileTopDiv').textContent = topDiv ? topDiv[0].split(' ')[0] : '—';
+
+  const histEl = document.getElementById('profileHistoryList');
+  if (!analyses.length) {
+    histEl.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem;padding:8px 0">No scans yet.</p>';
+  } else {
+    histEl.innerHTML = analyses.slice(0,5).map(a => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:1px;color:var(--text)">${a.divisionLabel}</div>
+          <div style="font-family:'Crimson Pro',serif;font-size:0.82rem;color:var(--text-mute);font-style:italic">${a.date}</div>
+        </div>
+        <div style="font-family:'Cinzel Decorative',serif;font-size:1.6rem;color:var(--text)">${a.score}</div>
+      </div>`).join('');
+  }
+}
+
+async function uploadAvatar(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const resized = await resizeImage(e.target.result, 300);
+    S.user.data.profile = S.user.data.profile || {};
+    S.user.data.profile.avatar = resized;
+    await saveUserData(S.user.data);
+    renderProfile();
+    renderHome();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── NUTRITION HELPERS ─────────────────────────────────────────────────────────
+function todayKey() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function getTodayLog() {
+  const logs = S.user?.data?.nutrition?.logs || {};
+  if (!logs[todayKey()]) logs[todayKey()] = { entries: [], water: 0 };
+  return logs[todayKey()];
+}
+
+function getMealTotals(entries) {
+  return entries.reduce((t, e) => ({
+    calories: t.calories + (parseInt(e.calories)||0),
+    protein:  t.protein  + (parseInt(e.protein)||0),
+    carbs:    t.carbs    + (parseInt(e.carbs)||0),
+    fat:      t.fat      + (parseInt(e.fat)||0)
+  }), { calories:0, protein:0, carbs:0, fat:0 });
+}
+
+// ── NUTRITION TODAY ───────────────────────────────────────────────────────────
+function renderNutriToday() {
+  if (!S.user) return;
+  const goals   = S.user.data.nutrition?.goals || {};
+  const log     = getTodayLog();
+  const totals  = getMealTotals(log.entries || []);
+  const water   = log.water || 0;
+  const wGoal   = goals.water || 128;
+
+  document.getElementById('todayCalConsumed').textContent = totals.calories;
+  document.getElementById('todayCalGoal').textContent     = goals.calories || '—';
+  document.getElementById('calProgressBar').style.width   = goals.calories ? Math.min(100,(totals.calories/goals.calories)*100)+'%' : '0';
+
+  const setMacro = (id, val, goal, barId, fillColor) => {
+    document.getElementById(id+'Val').textContent  = val;
+    document.getElementById(id+'Goal').textContent = goal || '—';
+    document.getElementById(barId).style.width     = goal ? Math.min(100,(val/goal)*100)+'%' : '0';
+  };
+  setMacro('macroProtein', totals.protein, goals.protein, 'macroProteinBar');
+  setMacro('macroCarbs',   totals.carbs,   goals.carbs,   'macroCarbsBar');
+  setMacro('macroFat',     totals.fat,     goals.fat,     'macroFatBar');
+
+  document.getElementById('waterOzDisplay').textContent  = water;
+  document.getElementById('waterGoalDisplay').textContent = wGoal;
+  document.getElementById('waterProgressBar').style.width = Math.min(100,(water/wGoal)*100)+'%';
+
+  // Also update home stats
+  document.getElementById('hStatCalories').textContent = totals.calories || '0';
+  document.getElementById('hStatWater').textContent    = water || '0';
+}
+
+// ── WATER ─────────────────────────────────────────────────────────────────────
+async function logWater(oz) {
+  const log = getTodayLog();
+  log.water = Math.max(0, (log.water||0) + oz);
+  S.user.data.nutrition.logs[todayKey()] = log;
+  await saveUserData(S.user.data);
+  renderNutriToday();
+}
+
+// ── MEAL LOG ──────────────────────────────────────────────────────────────────
+function renderMealsList() {
+  const log     = getTodayLog();
+  const entries = log.entries || [];
+  const el      = document.getElementById('mealsList');
+  if (!entries.length) {
+    el.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem;padding:8px 0">No meals logged today.</p>';
+    return;
+  }
+  el.innerHTML = entries.map((e,i) => `
+    <div class="rcard" style="margin-bottom:10px;padding:16px 20px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:0.72rem;letter-spacing:1px;color:var(--text);margin-bottom:4px">${e.name}</div>
+          <div style="font-family:'Crimson Pro',serif;font-size:0.85rem;color:var(--text-dim)">${e.calories} kcal &nbsp;·&nbsp; P:${e.protein}g &nbsp;·&nbsp; C:${e.carbs}g &nbsp;·&nbsp; F:${e.fat}g</div>
+        </div>
+        <button onclick="deleteMealEntry(${i})" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:1rem;padding:0 0 0 12px">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function openAddMeal(type) {
+  document.getElementById('addMealForm').style.display  = type==='manual' ? 'block' : 'none';
+  document.getElementById('scanMealForm').style.display = type==='photo'  ? 'block' : 'none';
+  if (type==='manual') { ['mealName','mealCal','mealPro','mealCarbs','mealFat'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; }); }
+}
+function closeAddMeal()  { document.getElementById('addMealForm').style.display='none'; }
+function closeScanMeal() {
+  document.getElementById('scanMealForm').style.display='none';
+  document.getElementById('mealPhotoPreview').style.display='none';
+  document.getElementById('mealScanResult').style.display='none';
+  S._mealPhotoData = null;
+}
+
+async function saveMealEntry(overrideData) {
+  const entry = overrideData || {
+    name:     document.getElementById('mealName')?.value.trim() || 'Unnamed',
+    calories: parseInt(document.getElementById('mealCal')?.value)  || 0,
+    protein:  parseInt(document.getElementById('mealPro')?.value)  || 0,
+    carbs:    parseInt(document.getElementById('mealCarbs')?.value) || 0,
+    fat:      parseInt(document.getElementById('mealFat')?.value)   || 0,
+  };
+  const log = getTodayLog();
+  log.entries = log.entries || [];
+  log.entries.push({ ...entry, id: Date.now(), time: new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) });
+  S.user.data.nutrition.logs[todayKey()] = log;
+  await saveUserData(S.user.data);
+  closeAddMeal(); closeScanMeal();
+  renderMealsList(); renderNutriToday(); renderHome();
+}
+
+async function deleteMealEntry(idx) {
+  const log = getTodayLog();
+  log.entries.splice(idx, 1);
+  S.user.data.nutrition.logs[todayKey()] = log;
+  await saveUserData(S.user.data);
+  renderMealsList(); renderNutriToday(); renderHome();
+}
+
+// ── MEAL PHOTO SCAN ───────────────────────────────────────────────────────────
+function loadMealPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('mealPhotoPreview');
+    img.src = e.target.result; img.style.display='block';
+    resizeImage(e.target.result, 800).then(r => { S._mealPhotoData = r; });
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeMealPhoto() {
+  if (!S._mealPhotoData) { alert('Please upload a photo first.'); return; }
+  const btn = document.getElementById('scanMealBtn');
+  btn.disabled=true; btn.textContent='Analyzing…';
+  const resultEl = document.getElementById('mealScanResult');
+  resultEl.style.display='none';
+  try {
+    const mediaType = S._mealPhotoData.split(';')[0].split(':')[1];
+    const b64       = S._mealPhotoData.split(',')[1];
+    const body = await callClaude({
+      system: `You are a precise nutrition estimator. Analyze the food photo and estimate the nutritional content. Respond ONLY with this exact JSON:
+{"name":"<meal name>","calories":<number>,"protein":<grams>,"carbs":<grams>,"fat":<grams>,"notes":"<1 sentence about assumptions/portion size>"}`,
+      messages: [{ role:'user', content:[
+        { type:'image', source:{ type:'base64', media_type:mediaType, data:b64 }},
+        { type:'text', text:'Estimate the calories and macros for this meal.' }
+      ]}],
+      max_tokens: 300
+    });
+    const raw    = body.content[0].text.trim();
+    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)[0]);
+    resultEl.style.display='block';
+    resultEl.innerHTML = `<div class="rcard" style="margin-bottom:0;border-color:var(--border-gold)">
+      <div class="rcard-label">AI Estimate</div>
+      <div style="font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:1px;color:var(--text);margin-bottom:8px">${parsed.name}</div>
+      <div style="font-family:'Crimson Pro',serif;font-size:0.95rem;color:var(--text-dim);margin-bottom:10px">${parsed.calories} kcal &nbsp;·&nbsp; P:${parsed.protein}g &nbsp;·&nbsp; C:${parsed.carbs}g &nbsp;·&nbsp; F:${parsed.fat}g</div>
+      <p style="font-family:'Crimson Pro',serif;font-size:0.82rem;color:var(--text-mute);font-style:italic;margin-bottom:14px">${parsed.notes}</p>
+      <button class="btn btn-primary" onclick="saveMealEntry(${JSON.stringify(JSON.stringify(parsed)).slice(1,-1)})" style="width:100%">Log This Meal →</button>
+    </div>`;
+    // Fix: attach data directly to avoid JSON escaping issues
+    resultEl.querySelector('.btn-primary').onclick = () => saveMealEntry(parsed);
+  } catch(e) {
+    resultEl.style.display='block';
+    resultEl.innerHTML = `<p style="color:var(--error);font-family:'Crimson Pro',serif">Error: ${e.message}</p>`;
+  }
+  btn.disabled=false; btn.textContent='Analyze Meal →';
+}
+
+// ── TDEE CALCULATOR ───────────────────────────────────────────────────────────
+function calculateTDEE() {
+  const age      = parseInt(document.getElementById('calcAge')?.value);
+  const weightLb = parseFloat(document.getElementById('calcWeight')?.value);
+  const heightIn = parseFloat(document.getElementById('calcHeight')?.value);
+  const activity = parseFloat(document.getElementById('calcActivity')?.value) || 1.55;
+  const goal     = document.getElementById('calcGoal')?.value || 'maintain';
+  if (!age || !weightLb || !heightIn) { alert('Please fill in all fields.'); return; }
+
+  const kg = weightLb * 0.453592;
+  const cm = heightIn * 2.54;
+  const bmr  = (10 * kg) + (6.25 * cm) - (5 * age) + 5; // Mifflin-St Jeor (men)
+  const tdee = bmr * activity;
+  const goalAdj = { cut:-500, maintain:0, 'lean-bulk':250, bulk:500 }[goal] || 0;
+  const calories = Math.round(tdee + goalAdj);
+
+  // Bodybuilder macro split
+  const protein = Math.round(weightLb * 1.0);        // 1g/lb BW
+  const fat     = Math.round(weightLb * 0.4);         // 0.4g/lb BW
+  const fatCals = fat * 9;
+  const proCals = protein * 4;
+  const carbs   = Math.round((calories - proCals - fatCals) / 4);
+
+  const resultsEl = document.getElementById('calcResults');
+  const gridEl    = document.getElementById('calcResultsGrid');
+  resultsEl.style.display = 'block';
+  gridEl.innerHTML = [
+    ['TDEE (maintenance)', Math.round(tdee) + ' kcal'],
+    ['Target Calories', calories + ' kcal'],
+    ['Protein', protein + 'g  (1g/lb BW)'],
+    ['Carbs',   Math.max(0,carbs) + 'g'],
+    ['Fat',     fat + 'g  (0.4g/lb BW)'],
+    ['Water',   '128 oz (1 gallon)'],
+  ].map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+    <span style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim)">${k}</span>
+    <span style="font-family:'Cinzel Decorative',serif;font-size:0.85rem;color:var(--gold)">${v}</span>
+  </div>`).join('');
+
+  // Store for saving
+  resultsEl.dataset.calories = calories;
+  resultsEl.dataset.protein  = protein;
+  resultsEl.dataset.carbs    = Math.max(0,carbs);
+  resultsEl.dataset.fat      = fat;
+}
+
+async function saveCalcGoals() {
+  const el = document.getElementById('calcResults');
+  if (!el || el.style.display==='none') return;
+  S.user.data.nutrition = S.user.data.nutrition || { goals:{}, logs:{} };
+  S.user.data.nutrition.goals = {
+    calories: parseInt(el.dataset.calories)||0,
+    protein:  parseInt(el.dataset.protein)||0,
+    carbs:    parseInt(el.dataset.carbs)||0,
+    fat:      parseInt(el.dataset.fat)||0,
+    water:    128
+  };
+  await saveUserData(S.user.data);
+  showNutriTab('today');
+  renderNutriToday();
+}
+
+// ── NUTRITION TABS ────────────────────────────────────────────────────────────
+function showNutriTab(tab) {
+  ['today','log','calc','history'].forEach(t => {
+    const panel = document.getElementById('ntab'+t.charAt(0).toUpperCase()+t.slice(1));
+    const btn   = document.getElementById('ntabBtn'+t.charAt(0).toUpperCase()+t.slice(1));
+    if (panel) panel.classList.toggle('active', t===tab);
+    if (btn)   btn.classList.toggle('active',   t===tab);
+  });
+  if (tab==='today')   renderNutriToday();
+  if (tab==='log')     renderMealsList();
+  if (tab==='history') renderNutriHistory();
+}
+
+function renderNutriHistory() {
+  const logs  = S.user?.data?.nutrition?.logs || {};
+  const goals = S.user?.data?.nutrition?.goals || {};
+  const days  = 7;
+  const labels = [], calories = [];
+  for (let i=days-1; i>=0; i--) {
+    const d   = new Date(); d.setDate(d.getDate()-i);
+    const key = d.toISOString().slice(0,10);
+    labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    const entries = logs[key]?.entries || [];
+    calories.push(getMealTotals(entries).calories);
+  }
+  requestAnimationFrame(() => {
+    const ctx = document.getElementById('nutriHistoryChart');
+    if (!ctx || !window.Chart) return;
+    if (ctx._chartInstance) ctx._chartInstance.destroy();
+    ctx._chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Calories',
+          data: calories,
+          backgroundColor: 'rgba(200,168,75,0.25)',
+          borderColor: '#c8a84b',
+          borderWidth: 1.5,
+          borderRadius: 4
+        }, goals.calories ? {
+          label: 'Goal',
+          data: Array(days).fill(goals.calories),
+          type: 'line',
+          borderColor: 'rgba(200,168,75,0.5)',
+          borderDash: [4,4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false
+        } : null].filter(Boolean)
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          y: { min:0, ticks:{ color:'#888', font:{family:'Cinzel, serif',size:10} }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          x: { ticks:{ color:'#888', font:{family:'Cinzel, serif',size:10} }, grid:{ color:'rgba(255,255,255,0.05)' } }
+        },
+        plugins: {
+          legend:{ display:false },
+          tooltip:{ backgroundColor:'#0e0e0e', borderColor:'rgba(200,168,75,0.3)', borderWidth:1, titleColor:'#c8a84b', bodyColor:'#ede8dc', titleFont:{family:'Cinzel, serif',size:11}, bodyFont:{family:"'Crimson Pro', serif",size:13} }
+        }
+      }
+    });
+  });
+}

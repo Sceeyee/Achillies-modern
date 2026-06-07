@@ -115,7 +115,7 @@ header {
 .container {
   max-width: 860px;
   margin: 0 auto;
-  padding: 48px 20px 80px;
+  padding: 48px 20px 100px;
 }
 
 /* ── AUTH ──────────────────────────────────────────────────────────────── */
@@ -1091,6 +1091,204 @@ header {
   font-size: 0.93rem;
   color: var(--text-dim);
   line-height: 1.65;
+}
+
+/* ── BOTTOM NAV ────────────────────────────────────────────────────────── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border-gold);
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+}
+
+.bnav-item {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+  background: none; border: none;
+  color: var(--text-mute);
+  font-family: 'Cinzel', serif;
+  font-size: 0.55rem; letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer; padding: 6px 4px;
+  transition: color 0.2s;
+}
+.bnav-item:hover { color: var(--text-dim); }
+.bnav-item.active { color: var(--gold); }
+
+/* ── APP SECTIONS ───────────────────────────────────────────────────────── */
+.app-section { display: none; padding-bottom: 80px; }
+.app-section.active { display: block; }
+
+/* ── HOME ───────────────────────────────────────────────────────────────── */
+.home-greeting {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 24px; padding-top: 8px;
+}
+
+.home-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.1rem; color: var(--gold);
+  flex-shrink: 0; overflow: hidden;
+  background-size: cover; background-position: center;
+}
+
+.home-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem; font-weight: 600;
+  color: var(--text); letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.home-sub {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.9rem; color: var(--text-mute); font-style: italic;
+}
+
+.home-stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; margin-bottom: 20px;
+}
+
+.home-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 10px;
+  text-align: center;
+}
+
+.home-stat-val {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.3rem; color: var(--text); line-height: 1;
+  margin-bottom: 4px;
+}
+
+.home-stat-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.52rem; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-mute);
+}
+
+/* ── NUTRITION TABS ─────────────────────────────────────────────────────── */
+.nutri-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+  margin-bottom: 20px; gap: 0;
+}
+
+.ntab {
+  flex: 1;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem; letter-spacing: 2px;
+  text-transform: uppercase;
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-mute); padding: 12px 8px;
+  cursor: pointer; transition: all 0.2s; margin-bottom: -1px;
+}
+.ntab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+.ntab-panel { display: none; }
+.ntab-panel.active { display: block; }
+
+/* ── MACRO BARS ─────────────────────────────────────────────────────────── */
+.calorie-display {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 2.8rem; color: var(--text); line-height: 1;
+  margin-bottom: 4px;
+}
+
+.calorie-sep { color: var(--text-mute); font-size: 1.5rem; }
+
+.macro-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px;
+}
+
+.macro-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-dim);
+  width: 60px; flex-shrink: 0;
+}
+
+.macro-bar-track {
+  flex: 1; height: 6px;
+  background: var(--border); border-radius: 99px; overflow: hidden;
+}
+
+.macro-bar-fill {
+  height: 100%; border-radius: 99px; width: 0;
+  transition: width 0.8s ease;
+}
+.protein-fill { background: rgba(74,222,128,0.8); }
+.carbs-fill   { background: rgba(251,191,36,0.8); }
+.fat-fill     { background: rgba(248,113,113,0.7); }
+
+.macro-val {
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem; color: var(--text-mute);
+  width: 80px; text-align: right; flex-shrink: 0;
+}
+
+/* ── WATER ──────────────────────────────────────────────────────────────── */
+.water-btns {
+  display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;
+}
+.water-btns .btn {
+  font-size: 0.65rem; padding: 8px 14px; flex: 1;
+}
+
+/* ── ADD MEAL ROW ───────────────────────────────────────────────────────── */
+.add-meal-row {
+  display: flex; gap: 10px; margin-bottom: 4px;
+}
+
+/* ── PROFILE ────────────────────────────────────────────────────────────── */
+.profile-header {
+  display: flex; align-items: center; gap: 20px;
+  margin-bottom: 24px; padding-top: 8px;
+}
+
+.profile-avatar-wrap { position: relative; flex-shrink: 0; }
+
+.profile-avatar {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.6rem; color: var(--gold);
+  overflow: hidden;
+  background-size: cover; background-position: center;
+}
+
+.avatar-edit {
+  position: absolute; bottom: 0; right: 0;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--gold); color: #000;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.profile-display-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem; font-weight: 600;
+  color: var(--text); letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.profile-member-sub {
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--gold); opacity: 0.7;
 }
 
 /* ── FOOTER ────────────────────────────────────────────────────────────── */
