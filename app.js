@@ -946,7 +946,7 @@ function saveLeaderboard(entries) {
   localStorage.setItem(LB_KEY, JSON.stringify(entries));
 }
 
-function postToLeaderboard() {
+async function postToLeaderboard() {
   const report = S.lastReport;
   if (!report) { alert('No scan to post. Complete a scan first.'); return; }
   const lb = getLeaderboard();
@@ -954,19 +954,34 @@ function postToLeaderboard() {
   const username = S.user.username;
   const divLabel = DIVISIONS[report._division || S.division]?.label || report.division || '—';
 
-  // Remove existing entry for this user+division, keep best score
   const existing = lb.find(e => e.username === username && e.division === divLabel);
   if (existing && existing.score >= score) {
-    alert(`Your current best for ${divLabel} is ${existing.score} — this score (${score}) doesn't beat it.`);
-    return;
+    if (!confirm(`Your best for ${divLabel} is ${existing.score}. Replace with this score (${score})?`)) return;
   }
+
+  // Grab scan photo and resize for storage
+  const rawPhoto = S.images.front || S.images.side || S.images.back || null;
+  let photo = null;
+  if (rawPhoto) {
+    try { photo = await resizeImage(rawPhoto, 480); } catch(e) { photo = null; }
+  }
+
+  // Grab strength stats from still-visible DOM inputs
+  const bench    = parseFloat(document.getElementById('sBench')?.value)    || 0;
+  const squat    = parseFloat(document.getElementById('sSquat')?.value)    || 0;
+  const deadlift = parseFloat(document.getElementById('sDeadlift')?.value) || 0;
+  const bw       = parseFloat(document.getElementById('sBodyweight')?.value)|| 0;
+
   const filtered = lb.filter(e => !(e.username === username && e.division === divLabel));
   filtered.push({
     username,
     score,
     division: divLabel,
     date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
-    tier: scoreTier(score)
+    tier: scoreTier(score),
+    photo,
+    avatar: S.user.data.profile?.avatar || null,
+    strength: (bench || squat || deadlift) ? { bw, bench, squat, deadlift } : null
   });
   saveLeaderboard(filtered);
   showSection('leaderboard');
@@ -977,35 +992,69 @@ function renderLeaderboard() {
   if (!el) return;
   const lb = getLeaderboard();
   if (!lb.length) {
-    el.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem">No scores posted yet. Complete a scan and tap Post Score.</p>';
+    el.innerHTML = `<div style="text-align:center;padding:60px 20px">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:3rem;color:rgba(200,168,75,0.15);margin-bottom:16px">⚔</div>
+      <p style="font-family:'Crimson Pro',serif;font-style:italic;color:#444;font-size:0.95rem;line-height:1.6">No scores posted yet.<br>Complete a scan and tap Post Score.</p>
+    </div>`;
     return;
   }
 
-  // Sort by score desc
-  const sorted = [...lb].sort((a,b) => b.score - a.score);
-  const medals = ['🥇','🥈','🥉'];
+  const sorted = [...lb].sort((a, b) => b.score - a.score);
 
   el.innerHTML = sorted.map((entry, i) => {
     const pct = entry.score / 10;
-    const color = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
+    const scoreColor = pct>=0.9?'#c8a84b':pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':pct>=0.3?'#e67e22':'#c0392b';
     const isMe = entry.username === S.user?.username;
-    const r = 22, cx = 28, cy = 28, circ = 2*Math.PI*r;
+    const rank = i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
 
-    return `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);${isMe?'background:rgba(200,168,75,0.04);margin:0 -18px;padding:14px 18px;border-radius:10px;':''}">
-      <div style="font-family:'Cinzel Decorative',serif;font-size:1.1rem;width:28px;text-align:center;color:${i<3?'var(--gold)':'var(--text-mute)'}">${medals[i] || i+1}</div>
-      <svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1a1a1a" stroke-width="5"/>
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
-          stroke-dasharray="${(pct*circ).toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"
-          transform="rotate(-90 ${cx} ${cy})"/>
-        <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${color}" font-size="13" font-weight="bold" font-family="Georgia,serif">${entry.score}</text>
-      </svg>
-      <div style="flex:1;min-width:0">
-        <div style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:1.5px;color:${isMe?'var(--gold)':'var(--text)'};margin-bottom:2px">${entry.username}${isMe?' ★':''}</div>
-        <div style="font-family:'Crimson Pro',serif;font-size:0.82rem;color:var(--text-mute);font-style:italic">${entry.division}</div>
-        <div style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;color:${color};margin-top:3px">${entry.tier}</div>
+    // Avatar
+    const av = entry.avatar;
+    const avBg = av ? `background-image:url(${av});background-size:cover;background-position:center` : 'background:#1a1a1a';
+    const avInit = av ? '' : `<span style="font-family:'Cinzel Decorative',serif;font-size:0.85rem;color:#c8a84b">${entry.username.charAt(0).toUpperCase()}</span>`;
+
+    // Photo area
+    const photoArea = entry.photo
+      ? `<img src="${entry.photo}" style="width:100%;display:block;object-fit:cover;max-height:400px;background:#0a0a0a">`
+      : `<div style="width:100%;height:160px;background:linear-gradient(160deg,#0e0e0e,#161616);display:flex;align-items:center;justify-content:center">
+           <div style="font-family:'Cinzel Decorative',serif;font-size:4rem;color:rgba(200,168,75,0.12)">${entry.score}</div>
+         </div>`;
+
+    // Strength pills
+    const st = entry.strength;
+    const strengthRow = st && (st.bench || st.squat || st.deadlift) ? `
+      <div style="display:flex;gap:6px;margin-top:12px">
+        ${st.bench    ? `<div style="flex:1;background:#151515;border-radius:8px;padding:9px 4px;text-align:center"><div style="font-family:'Cinzel Decorative',serif;font-size:1rem;color:#c8a84b">${st.bench}</div><div style="font-family:'Cinzel',serif;font-size:0.35rem;letter-spacing:1.5px;text-transform:uppercase;color:#3a3a3a;margin-top:3px">Bench</div></div>` : ''}
+        ${st.squat    ? `<div style="flex:1;background:#151515;border-radius:8px;padding:9px 4px;text-align:center"><div style="font-family:'Cinzel Decorative',serif;font-size:1rem;color:#c8a84b">${st.squat}</div><div style="font-family:'Cinzel',serif;font-size:0.35rem;letter-spacing:1.5px;text-transform:uppercase;color:#3a3a3a;margin-top:3px">Squat</div></div>` : ''}
+        ${st.deadlift ? `<div style="flex:1;background:#151515;border-radius:8px;padding:9px 4px;text-align:center"><div style="font-family:'Cinzel Decorative',serif;font-size:1rem;color:#c8a84b">${st.deadlift}</div><div style="font-family:'Cinzel',serif;font-size:0.35rem;letter-spacing:1.5px;text-transform:uppercase;color:#3a3a3a;margin-top:3px">Deadlift</div></div>` : ''}
+        ${st.bw       ? `<div style="flex:1;background:#151515;border-radius:8px;padding:9px 4px;text-align:center"><div style="font-family:'Cinzel Decorative',serif;font-size:1rem;color:#888">${st.bw}</div><div style="font-family:'Cinzel',serif;font-size:0.35rem;letter-spacing:1.5px;text-transform:uppercase;color:#3a3a3a;margin-top:3px">BW lbs</div></div>` : ''}
+      </div>` : '';
+
+    return `<div style="background:#0d0d0d;border:1px solid ${isMe?'rgba(200,168,75,0.35)':'rgba(255,255,255,0.06)'};border-radius:14px;overflow:hidden;margin-bottom:18px">
+
+      <!-- Header row (Instagram-style) -->
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+        <div style="width:38px;height:38px;border-radius:50%;border:2px solid rgba(200,168,75,0.35);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;${avBg}">${avInit}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:1.5px;color:${isMe?'#c8a84b':'#ede8dc'}">${entry.username}${isMe?' ✦':''}</div>
+          <div style="font-family:'Crimson Pro',serif;font-size:0.72rem;color:#3a3a3a;font-style:italic;margin-top:1px">${entry.division}</div>
+        </div>
+        <div style="font-family:'Cinzel Decorative',serif;font-size:${i<3?'1.1rem':'0.75rem'};color:${i<3?'#c8a84b':'#3a3a3a'}">${rank}</div>
       </div>
-      <div style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:1px;text-transform:uppercase;color:var(--text-mute);text-align:right">${entry.date}</div>
+
+      <!-- Photo -->
+      ${photoArea}
+
+      <!-- Score + stats -->
+      <div style="padding:14px">
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:2px">
+          <span style="font-family:'Cinzel Decorative',serif;font-size:2.4rem;line-height:1;color:${scoreColor}">${entry.score}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.45rem;letter-spacing:2px;text-transform:uppercase;color:#333">/ 10</span>
+          <span style="margin-left:auto;font-family:'Cinzel',serif;font-size:0.42rem;letter-spacing:1.5px;text-transform:uppercase;color:${scoreColor};opacity:0.7">${entry.tier||''}</span>
+        </div>
+        ${strengthRow}
+        <div style="font-family:'Cinzel',serif;font-size:0.38rem;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;margin-top:10px">${entry.date}</div>
+      </div>
+
     </div>`;
   }).join('');
 }
