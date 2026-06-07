@@ -1197,40 +1197,65 @@ function renderProfile() {
   if (!S.user) return;
   const analyses = S.user.data.analyses || [];
   const scores   = analyses.map(a => parseFloat(a.score)||0);
+  const best     = scores.length ? Math.max(...scores).toFixed(1) : '—';
   const avatar   = S.user.data.profile?.avatar;
-
-  document.getElementById('profileDisplayName').textContent = S.user.username;
-
-  const pav = document.getElementById('profileAvatar');
-  if (avatar) {
-    pav.style.backgroundImage = `url(${avatar})`;
-    pav.style.backgroundSize  = 'cover';
-    pav.style.backgroundPosition = 'center';
-    pav.textContent = '';
-  } else {
-    pav.textContent = S.user.username.charAt(0).toUpperCase();
-  }
-
-  document.getElementById('profileBestScore').textContent  = scores.length ? Math.max(...scores).toFixed(1) : '—';
-  document.getElementById('profileTotalScans').textContent = analyses.length;
   const divCounts = {};
   analyses.forEach(a => { divCounts[a.divisionLabel] = (divCounts[a.divisionLabel]||0)+1; });
   const topDiv = Object.entries(divCounts).sort((a,b)=>b[1]-a[1])[0];
-  document.getElementById('profileTopDiv').textContent = topDiv ? topDiv[0].split(' ')[0] : '—';
+  const topDivName = topDiv ? topDiv[0].split(' ')[0] : '—';
 
-  const histEl = document.getElementById('profileHistoryList');
-  if (!analyses.length) {
-    histEl.innerHTML = '<p style="font-family:\'Crimson Pro\',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem;padding:8px 0">No scans yet.</p>';
-  } else {
-    histEl.innerHTML = analyses.slice(0,5).map(a => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:1px;color:var(--text)">${a.divisionLabel}</div>
-          <div style="font-family:'Crimson Pro',serif;font-size:0.82rem;color:var(--text-mute);font-style:italic">${a.date}</div>
-        </div>
-        <div style="font-family:'Cinzel Decorative',serif;font-size:1.6rem;color:var(--text)">${a.score}</div>
-      </div>`).join('');
-  }
+  const subEl = document.getElementById('profileHeaderSub');
+  if (subEl) subEl.textContent = S.user.username.toUpperCase();
+
+  const avatarStyle = avatar
+    ? `background-image:url(${avatar});background-size:cover;background-position:center`
+    : `background:var(--surface2)`;
+
+  const historyRows = analyses.length
+    ? analyses.slice(0,8).map(a => {
+        const pct = parseFloat(a.score)/10;
+        const col = pct>=0.7?'#27ae60':pct>=0.5?'#f1c40f':'#e67e22';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:1px;color:var(--text);margin-bottom:2px">${a.divisionLabel}</div>
+            <div style="font-family:'Crimson Pro',serif;font-size:0.8rem;color:var(--text-mute);font-style:italic">${a.date}</div>
+          </div>
+          <div style="font-family:'Cinzel Decorative',serif;font-size:1.5rem;color:${col}">${a.score}</div>
+        </div>`;
+      }).join('')
+    : `<p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-mute);font-size:0.9rem;padding:8px 0">No scans yet.</p>`;
+
+  document.getElementById('profileContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px">
+      <div style="position:relative;flex-shrink:0">
+        <div style="width:72px;height:72px;border-radius:50%;border:2px solid var(--border-gold);display:flex;align-items:center;justify-content:center;font-family:'Cinzel Decorative',serif;font-size:1.4rem;color:var(--gold);overflow:hidden;${avatarStyle}">${avatar?'':S.user.username.charAt(0).toUpperCase()}</div>
+        <label for="avatarInput" style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:var(--gold);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:0.7rem;cursor:pointer;border:2px solid var(--bg)">✎</label>
+      </div>
+      <div>
+        <div style="font-family:'Cinzel',serif;font-size:1rem;letter-spacing:2px;color:var(--text);margin-bottom:3px">${S.user.username}</div>
+        <div style="font-family:'Crimson Pro',serif;font-size:0.85rem;color:var(--text-mute);font-style:italic">Achilles Member</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+      <div class="home-stat"><div class="home-stat-val">${best}</div><div class="home-stat-label">Best Score</div></div>
+      <div class="home-stat"><div class="home-stat-val">${analyses.length}</div><div class="home-stat-label">Total Scans</div></div>
+      <div class="home-stat"><div class="home-stat-val" style="font-size:0.85rem">${topDivName}</div><div class="home-stat-label">Division</div></div>
+    </div>
+
+    <div class="rcard" style="margin-bottom:14px">
+      <div class="rcard-label" style="margin-bottom:8px">Scan History</div>
+      ${historyRows}
+    </div>
+
+    <div class="rcard">
+      <div class="rcard-label">Account</div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-ghost" onclick="openHistory()" style="flex:1">Full History</button>
+        <button class="btn btn-ghost" onclick="logout()" style="color:rgba(248,113,113,0.8);border-color:rgba(248,113,113,0.3)">Depart</button>
+      </div>
+      <p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--text-mute);font-size:0.78rem;margin-top:12px">All data encrypted and stored on this device only.</p>
+    </div>`;
 }
 
 async function uploadAvatar(event) {

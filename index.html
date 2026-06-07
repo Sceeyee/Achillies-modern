@@ -1825,42 +1825,12 @@ header {
     <div class="page-header">
       <div>
         <div class="page-header-title">Profile</div>
-        <div class="page-header-sub" id="profileDisplayName"></div>
+        <div class="page-header-sub" id="profileHeaderSub"></div>
       </div>
     </div>
-    <div class="page-content">
-      <div class="profile-header">
-        <div class="profile-avatar-wrap">
-          <div class="profile-avatar" id="profileAvatar"></div>
-          <label class="avatar-edit" for="avatarInput">✎</label>
-          <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
-        </div>
-        <div class="profile-info">
-          <div class="profile-member-sub">Achilles Member</div>
-        </div>
-      </div>
-
-      <div class="home-stats-row" style="margin-bottom:14px">
-        <div class="home-stat"><div class="home-stat-val" id="profileBestScore">—</div><div class="home-stat-label">Best Score</div></div>
-        <div class="home-stat"><div class="home-stat-val" id="profileTotalScans">0</div><div class="home-stat-label">Total Scans</div></div>
-        <div class="home-stat"><div class="home-stat-val" id="profileTopDiv">—</div><div class="home-stat-label">Division</div></div>
-      </div>
-
-      <div class="rcard" style="margin-bottom:14px">
-        <div class="rcard-label">Scan History</div>
-        <div id="profileHistoryList"></div>
-      </div>
-
-      <div class="rcard">
-        <div class="rcard-label">Account</div>
-        <div class="btn-row" style="margin-top:4px">
-          <button class="btn btn-ghost" onclick="openHistory()" style="flex:1">Full History</button>
-          <button class="btn btn-ghost" onclick="logout()" style="color:rgba(248,113,113,0.8);border-color:rgba(248,113,113,0.3)">Depart</button>
-        </div>
-        <p class="disclaimer" style="margin-top:12px;text-align:left">All data stored encrypted on this device only.</p>
-      </div>
-
-    </div><!-- /page-content -->
+    <div class="page-content" id="profileContent"></div>
+    <!-- avatar upload input lives outside generated HTML so it persists -->
+    <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
   </div><!-- /sectionProfile -->
 
 </div><!-- /appScreen -->
