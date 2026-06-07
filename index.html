@@ -1828,9 +1828,46 @@ header {
         <div class="page-header-sub" id="profileHeaderSub"></div>
       </div>
     </div>
-    <div class="page-content" id="profileContent"></div>
-    <!-- avatar upload input lives outside generated HTML so it persists -->
-    <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
+    <div class="page-content">
+
+      <!-- Avatar -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:32px 0 24px">
+        <div id="profileAvatar" style="width:100px;height:100px;border-radius:50%;border:2px solid rgba(200,168,75,0.4);background:#151515;display:flex;align-items:center;justify-content:center;font-family:'Cinzel Decorative',serif;font-size:2rem;color:#c8a84b;overflow:hidden;margin-bottom:16px;cursor:pointer" onclick="document.getElementById('avatarInput').click()">
+          <span id="profileAvatarInitial">?</span>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:2px;color:rgba(200,168,75,0.6);text-transform:uppercase;cursor:pointer" onclick="document.getElementById('avatarInput').click()">Tap to change photo</div>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
+      </div>
+
+      <!-- Username -->
+      <div style="text-align:center;margin-bottom:32px">
+        <div id="profileUsername" style="font-family:'Cinzel',serif;font-size:1.1rem;letter-spacing:3px;color:#ede8dc"></div>
+        <div style="font-family:'Crimson Pro',serif;font-size:0.9rem;color:#444;font-style:italic;margin-top:4px">Achilles Member</div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">
+        <div style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 8px;text-align:center">
+          <div id="profileBestScore" style="font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:#c8a84b">—</div>
+          <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:1px;text-transform:uppercase;color:#444;margin-top:5px">Best Score</div>
+        </div>
+        <div style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 8px;text-align:center">
+          <div id="profileScanCount" style="font-family:'Cinzel Decorative',serif;font-size:1.2rem;color:#c8a84b">0</div>
+          <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:1px;text-transform:uppercase;color:#444;margin-top:5px">Total Scans</div>
+        </div>
+        <div style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 8px;text-align:center">
+          <div id="profileDivision" style="font-family:'Cinzel Decorative',serif;font-size:0.9rem;color:#c8a84b">—</div>
+          <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:1px;text-transform:uppercase;color:#444;margin-top:5px">Division</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="openHistory()" style="flex:1">View History</button>
+        <button class="btn btn-ghost" onclick="logout()" style="color:rgba(248,113,113,0.8);border-color:rgba(248,113,113,0.3)">Sign Out</button>
+      </div>
+
+    </div>
   </div><!-- /sectionProfile -->
 
 </div><!-- /appScreen -->
