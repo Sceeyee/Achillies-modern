@@ -1106,6 +1106,8 @@ async function postToLeaderboard() {
     tier: scoreTier(score),
     photo,
     avatar: S.user.data.profile?.avatar || null,
+    displayName: S.user.data.profile?.displayName || null,
+    bio: S.user.data.profile?.bio || null,
     strength: (bench || squat || deadlift) ? { bw, bench, squat, deadlift } : null
   });
   saveLeaderboard(filtered);
@@ -1160,8 +1162,8 @@ function renderLeaderboard() {
       <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
         <div style="width:38px;height:38px;border-radius:50%;border:2px solid rgba(200,168,75,0.35);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;${avBg}">${avInit}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:1.5px;color:${isMe?'#c8a84b':'#ede8dc'}">${entry.username}${isMe?' ✦':''}</div>
-          <div style="font-family:'Crimson Pro',serif;font-size:0.72rem;color:#3a3a3a;font-style:italic;margin-top:1px">${entry.division}</div>
+          <div style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:1.5px;color:${isMe?'#c8a84b':'#ede8dc'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${entry.displayName || entry.username}${isMe?' ✦':''}</div>
+          <div style="font-family:'Crimson Pro',serif;font-size:0.72rem;color:#888;font-style:italic;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${entry.division}${entry.bio ? ' · ' + entry.bio : ''}</div>
         </div>
         <div style="font-family:'Cinzel Decorative',serif;font-size:${i<3?'1.1rem':'0.75rem'};color:${i<3?'#c8a84b':'#3a3a3a'}">${rank}</div>
       </div>
@@ -1196,7 +1198,7 @@ function renderHome() {
   const analyses = S.user.data.analyses || [];
   const scores   = analyses.map(a => parseFloat(a.score)||0);
 
-  document.getElementById('homeGreeting').textContent = S.user.username.toUpperCase();
+  document.getElementById('homeGreeting').textContent = (S.user.data.profile?.displayName || S.user.username).toUpperCase();
   document.getElementById('hStatScore').textContent   = scores.length ? Math.max(...scores).toFixed(1) : '—';
   document.getElementById('hStatScans').textContent   = analyses.length;
 
@@ -1391,6 +1393,42 @@ function buildMacroMiniBar(label, val, goal, color) {
 }
 
 // ── PROFILE ───────────────────────────────────────────────────────────────────
+function openEditProfile() {
+  const p = S.user?.data?.profile || {};
+  document.getElementById('epName').value   = p.displayName || '';
+  document.getElementById('epBio').value    = p.bio || '';
+  document.getElementById('epHeight').value = p.height || '';
+  document.getElementById('epWeight').value = p.weight || '';
+  document.getElementById('epAge').value    = p.age || '';
+  document.getElementById('editProfileForm').style.display = '';
+  document.getElementById('editProfileBtn').style.display = 'none';
+}
+
+function closeEditProfile() {
+  document.getElementById('editProfileForm').style.display = 'none';
+  document.getElementById('editProfileBtn').style.display = '';
+}
+
+async function saveProfileEdits() {
+  S.user.data.profile = S.user.data.profile || {};
+  const p = S.user.data.profile;
+  p.displayName = document.getElementById('epName').value.trim();
+  p.bio         = document.getElementById('epBio').value.trim();
+  p.height      = parseFloat(document.getElementById('epHeight').value) || null;
+  p.weight      = parseFloat(document.getElementById('epWeight').value) || null;
+  p.age         = parseInt(document.getElementById('epAge').value, 10) || null;
+  await saveUserData(S.user.data);
+  closeEditProfile();
+  renderProfile();
+  renderHome();
+}
+
+function fmtHeight(inches) {
+  if (!inches) return '—';
+  const ft = Math.floor(inches / 12), inch = Math.round(inches % 12);
+  return `${ft}'${inch}"`;
+}
+
 function renderProfile() {
   if (!S.user) return;
   const analyses = S.user.data.analyses || [];
@@ -1409,9 +1447,27 @@ function renderProfile() {
   const subEl = document.getElementById('profileHeaderSub');
   if (subEl) subEl.textContent = S.user.username.toUpperCase();
 
-  // Username + tier badge
+  // Username + tier badge (display name falls back to account name)
+  const prof = S.user.data.profile || {};
+  const shownName = prof.displayName || S.user.username;
   const unEl = document.getElementById('profileUsername');
-  if (unEl) unEl.innerHTML = S.user.username + (tier ? `&nbsp;&nbsp;${tierBadgeHTML(best, true)}` : '');
+  if (unEl) unEl.innerHTML = shownName + (tier ? `&nbsp;&nbsp;${tierBadgeHTML(best, true)}` : '');
+
+  // Bio
+  const bioEl = document.getElementById('profileBio');
+  if (bioEl) bioEl.textContent = prof.bio || 'Achilles Member';
+
+  // Body stats (only show row if at least one value set)
+  const bodyEl = document.getElementById('profileBodyStats');
+  if (bodyEl) {
+    const hasBody = prof.height || prof.weight || prof.age;
+    bodyEl.style.display = hasBody ? 'grid' : 'none';
+    if (hasBody) {
+      document.getElementById('profileHeight').textContent = fmtHeight(prof.height);
+      document.getElementById('profileWeight').textContent = prof.weight ? `${prof.weight}` : '—';
+      document.getElementById('profileAge').textContent    = prof.age || '—';
+    }
+  }
 
   // Stats
   const bsEl = document.getElementById('profileBestScore');

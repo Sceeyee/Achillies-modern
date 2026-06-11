@@ -1844,17 +1844,52 @@ header {
 
       <!-- Avatar -->
       <div style="display:flex;flex-direction:column;align-items:center;padding:32px 0 24px">
-        <div id="profileAvatar" style="width:100px;height:100px;border-radius:50%;border:2px solid rgba(200,168,75,0.4);background:#151515;display:flex;align-items:center;justify-content:center;font-family:'Cinzel Decorative',serif;font-size:2rem;color:#c8a84b;overflow:hidden;margin-bottom:16px;cursor:pointer" onclick="document.getElementById('avatarInput').click()">
+        <div id="profileAvatar" style="width:100px;height:100px;border-radius:50%;border:2px solid rgba(200,168,75,0.4);background:#151515;display:flex;align-items:center;justify-content:center;font-family:'Cinzel Decorative',serif;font-size:2rem;color:#c8a84b;overflow:hidden;margin-bottom:14px;cursor:pointer" onclick="document.getElementById('avatarInput').click()">
           <span id="profileAvatarInitial">?</span>
         </div>
-        <div style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:2px;color:rgba(200,168,75,0.6);text-transform:uppercase;cursor:pointer" onclick="document.getElementById('avatarInput').click()">Tap to change photo</div>
+        <button class="btn btn-ghost" style="font-size:0.6rem;padding:8px 18px" onclick="document.getElementById('avatarInput').click()">📷 Change Photo</button>
         <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
       </div>
 
-      <!-- Username -->
-      <div style="text-align:center;margin-bottom:32px">
+      <!-- Username + bio -->
+      <div style="text-align:center;margin-bottom:24px">
         <div id="profileUsername" style="font-family:'Cinzel',serif;font-size:1.1rem;letter-spacing:3px;color:#ede8dc"></div>
-        <div style="font-family:'Crimson Pro',serif;font-size:0.9rem;color:#888;font-style:italic;margin-top:4px">Achilles Member</div>
+        <div id="profileBio" style="font-family:'Crimson Pro',serif;font-size:0.9rem;color:#888;font-style:italic;margin-top:4px">Achilles Member</div>
+      </div>
+
+      <!-- Edit Profile -->
+      <button class="btn btn-ghost" id="editProfileBtn" onclick="openEditProfile()" style="width:100%;margin-bottom:14px">✎ Edit Profile</button>
+      <div id="editProfileForm" style="display:none;margin-bottom:14px">
+        <div class="rcard">
+          <div class="rcard-label">Edit Profile</div>
+          <div class="field"><label>Display Name</label><input type="text" id="epName" maxlength="24" placeholder="e.g. Austin"></div>
+          <div class="field"><label>Bio</label><input type="text" id="epBio" maxlength="80" placeholder="e.g. Classic Physique · road to my first show"></div>
+          <div class="strength-grid">
+            <div class="field"><label>Height (in)</label><input type="number" id="epHeight" placeholder="70" min="0"></div>
+            <div class="field"><label>Weight (lbs)</label><input type="number" id="epWeight" placeholder="180" min="0"></div>
+            <div class="field"><label>Age</label><input type="number" id="epAge" placeholder="21" min="0"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="closeEditProfile()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveProfileEdits()" style="flex:1">Save →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body stats -->
+      <div id="profileBodyStats" style="display:none;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 8px;text-align:center">
+          <div id="profileHeight" style="font-family:'Cinzel Decorative',serif;font-size:1.1rem;color:#ede8dc">—</div>
+          <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:1px;text-transform:uppercase;color:#666;margin-top:5px">Height</div>
+        </div>
+        <div style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 8px;text-align:center">
+          <div id="profileWeight" style="font-family:'Cinzel Decorative',serif;font-size:1.1rem;color:#ede8dc">—</div>
+          <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:1px;text-transform:uppercase;color:#666;margin-top:5px">Weight</div>
+        </div>
+        <div style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 8px;text-align:center">
+          <div id="profileAge" style="font-family:'Cinzel Decorative',serif;font-size:1.1rem;color:#ede8dc">—</div>
+          <div style="font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:1px;text-transform:uppercase;color:#666;margin-top:5px">Age</div>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -2014,9 +2049,9 @@ header {
 </div>
 
 <!-- Footer -->
-<footer class="footer">Photos never leave your device — processed via direct API call · Account data stored encrypted locally · build v4</footer>
+<footer class="footer">Photos never leave your device — processed via direct API call · Account data stored encrypted locally · build v5</footer>
 
-<script src="data/divisions.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="data/divisions.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
